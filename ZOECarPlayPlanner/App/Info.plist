@@ -41,8 +41,19 @@
 					<string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>
 				</dict>
 			</array>
-			<!-- CarPlay scene — activer uniquement avec l'entitlement CarPlay approuvé par Apple -->
 			<!--
+				CarPlay scene.
+				PRÉREQUIS : L'entitlement Apple doit être accordé AVANT d'activer ce bloc.
+				Demander l'accès sur : https://developer.apple.com/carplay/
+				  - Navigation : com.apple.developer.carplay-navigation
+				  - Information : com.apple.developer.carplay-information
+				
+				Ajouter l'entitlement dans le fichier ZOECarPlayPlanner.entitlements :
+				  <key>com.apple.developer.carplay-information</key>
+				  <true/>
+				
+				Ensuite décommenter le bloc ci-dessous et supprimer ce commentaire.
+			-->
 			<key>CPTemplateApplicationSceneSessionRoleApplication</key>
 			<array>
 				<dict>
@@ -54,7 +65,6 @@
 					<string>CarPlay Configuration</string>
 				</dict>
 			</array>
-			-->
 		</dict>
 	</dict>
 	<key>UILaunchScreen</key>

@@ -42,6 +42,7 @@
 		B825427CBD92408D9A2D3D76 /* ChargingPlannerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 134C66DF85854CABBAA0FD35 /* ChargingPlannerTests.swift */; };
 		57D41BD96E89415DBA6C0D9B /* EnergyConsumptionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2E0FAA35B7C41AAAADF20C7 /* EnergyConsumptionTests.swift */; };
 		E3E13048DF1F4ED28EC59670 /* MockRoutingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15B491D6A84249B98FC7B8BF /* MockRoutingTests.swift */; };
+		8C72172E45AE4303949C5DB4 /* RenaultMapperTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D23AA270CDAE4080B89D8E23 /* RenaultMapperTests.swift */; };
 		24366A8298B84C1C8C7B5EEF /* MockVehicleServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CCFF37B41FC489FB506B6CF /* MockVehicleServiceTests.swift */; };
 /* End PBXBuildFile section */
 
@@ -85,6 +86,7 @@
 		134C66DF85854CABBAA0FD35 /* ChargingPlannerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChargingPlannerTests.swift; sourceTree = "<group>"; };
 		F2E0FAA35B7C41AAAADF20C7 /* EnergyConsumptionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnergyConsumptionTests.swift; sourceTree = "<group>"; };
 		15B491D6A84249B98FC7B8BF /* MockRoutingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockRoutingTests.swift; sourceTree = "<group>"; };
+		D23AA270CDAE4080B89D8E23 /* RenaultMapperTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RenaultMapperTests.swift; sourceTree = "<group>"; };
 		2CCFF37B41FC489FB506B6CF /* MockVehicleServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockVehicleServiceTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -235,6 +237,7 @@
 				134C66DF85854CABBAA0FD35 /* ChargingPlannerTests.swift */,
 				F2E0FAA35B7C41AAAADF20C7 /* EnergyConsumptionTests.swift */,
 				15B491D6A84249B98FC7B8BF /* MockRoutingTests.swift */,
+				D23AA270CDAE4080B89D8E23 /* RenaultMapperTests.swift */,
 				2CCFF37B41FC489FB506B6CF /* MockVehicleServiceTests.swift */,
 			);
 			path = ZOECarPlayPlannerTests;
@@ -382,6 +385,7 @@
 				B825427CBD92408D9A2D3D76 /* ChargingPlannerTests.swift in Sources */,
 				57D41BD96E89415DBA6C0D9B /* EnergyConsumptionTests.swift in Sources */,
 				E3E13048DF1F4ED28EC59670 /* MockRoutingTests.swift in Sources */,
+				8C72172E45AE4303949C5DB4 /* RenaultMapperTests.swift in Sources */,
 				24366A8298B84C1C8C7B5EEF /* MockVehicleServiceTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
