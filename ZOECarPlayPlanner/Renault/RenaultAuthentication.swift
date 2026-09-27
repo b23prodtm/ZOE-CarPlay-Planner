@@ -138,12 +138,15 @@ actor RenaultAuthentication {
         request.httpBody = body
 
         let data = try await performRequest(request)
+        print("✅ Gigya Login Response: \(String(data: data, encoding: .utf8) ?? "N/A")")
         let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        print("📋 Gigya JSON: \(json ?? [:])")
         guard let statusCode = json?["statusCode"] as? Int, statusCode == 200,
               let loginToken = json?["sessionInfo"] as? [String: Any],
               let cookieValue = loginToken["cookieValue"] as? String
         else {
             let msg = (json?["errorMessage"] as? String) ?? "Échec login Gigya"
+            print("❌ Gigya Error: \(msg)")
             throw RenaultServiceError.unknownError(msg)
         }
         return cookieValue
