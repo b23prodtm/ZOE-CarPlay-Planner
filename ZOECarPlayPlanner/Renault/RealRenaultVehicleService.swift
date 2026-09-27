@@ -105,7 +105,7 @@ enum RenaultMapper {
             throw RenaultServiceError.dataUnavailable
         }
         let autonomy      = (attrs["batteryAutonomy"]  as? Int).map(Double.init) ?? estimatedRange(soc: Double(level))
-        let plugStatus    = (attrs["plugStatus"]        as? Int) ?? 0
+        _    = (attrs["plugStatus"]        as? Int) ?? 0
         let chargingValue = (attrs["chargingStatus"]    as? Double) ?? -1.0
         let powerW        = (attrs["chargingInstantaneousPower"] as? Double) ?? 0
         let powerKW       = powerW > 0 ? powerW / 1000.0 : nil

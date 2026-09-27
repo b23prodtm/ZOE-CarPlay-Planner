@@ -7,87 +7,97 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		16C4953CADB9407AB606D58E /* ZOECarPlayPlannerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7AAD342BE2F47539D86EFFD /* ZOECarPlayPlannerApp.swift */; };
-		85AE7D9B30BD4207A2E955A7 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EDF2C212F124CC5B17F9083 /* AppState.swift */; };
-		BB0EB1EA258843AA841A2EBE /* Vehicle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 574A673F452149CEA86EDDA7 /* Vehicle.swift */; };
-		D810794E0DC647A5894FD1C3 /* BatteryState.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2CFCF4CDD264F7CAE24602A /* BatteryState.swift */; };
-		2A9C137F21794FEEA33539B2 /* Route.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4124CE0B11044118607DD3B /* Route.swift */; };
-		0720D3789733489796B6DB71 /* ChargingStop.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B66841D10BD43EC81905DF2 /* ChargingStop.swift */; };
-		8DBFFB52B83C467CB3323784 /* ChargingStation.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4788FAFBF5F4C4BAB536BD8 /* ChargingStation.swift */; };
-		AC56E6544EF74E9EAD3465C8 /* PlannerSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E6026360E2F4344B3615AD1 /* PlannerSettings.swift */; };
-		EBA1399222234EEFB8869262 /* VehicleServiceProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CA4B652F04948B992C5C3AF /* VehicleServiceProtocol.swift */; };
 		05B161062A3D4CA0B95DF5B9 /* MockRenaultVehicleService.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEFCD70B5414461A9B9A3E6E /* MockRenaultVehicleService.swift */; };
-		4768F7B022D64D169ED24DFC /* RealRenaultVehicleService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF45507A1EF74C0E897C8DE6 /* RealRenaultVehicleService.swift */; };
-		5DE146D18C27426F8100B118 /* RenaultAuthentication.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CF13E9B15E1411394C74BB8 /* RenaultAuthentication.swift */; };
-		F5E5E5F1CF01449BA2F19F76 /* RenaultAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8805246683C04817973904F6 /* RenaultAPIClient.swift */; };
-		AADAD6CFC7EA4257B07153E2 /* RoutingProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6B0B68FD8B74148A81C55E2 /* RoutingProvider.swift */; };
-		30659E6BADD247E380C44500 /* MockRoutingProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DD8BBEF235F497FB042B870 /* MockRoutingProvider.swift */; };
-		DD12EA4F33D04D3BB015012C /* AppleRoutingProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E69F199E7524D5984DD0540 /* AppleRoutingProvider.swift */; };
-		3B75B3C83D364FA488E9F757 /* GoogleRoutingProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C769EDB13BC49E89A722409 /* GoogleRoutingProvider.swift */; };
-		D51F673BE39E43DAB5C8190C /* ChargingPlanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24A76E3C9C4C4F368B7DDD89 /* ChargingPlanner.swift */; };
-		F757E42B1DD9494D81D9848E /* EnergyConsumptionModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6651A707ECA9467AAF569520 /* EnergyConsumptionModel.swift */; };
+		0720D3789733489796B6DB71 /* ChargingStop.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B66841D10BD43EC81905DF2 /* ChargingStop.swift */; };
 		1376157444B94B0B9FF7BA0A /* ChargingStrategy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BC2CD6EABA842D180EBB18E /* ChargingStrategy.swift */; };
-		A9D3B0FF1DAB43048C80FC75 /* ChargingStationProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC2019911561491BA9D062BF /* ChargingStationProvider.swift */; };
-		1C68655ECF3D4538A1865460 /* CarPlaySceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9E0C2B2713E4BF189BA45BF /* CarPlaySceneDelegate.swift */; };
-		702580FDC4C043F8B4C3785A /* CarPlayCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6839C3E4A0E1434A97FEA636 /* CarPlayCoordinator.swift */; };
-		4C710EC76C244C3788C489BD /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AF62AF133054E6EB5DFBBE5 /* ContentView.swift */; };
-		3D2FF996F1564CF886439A64 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A369C8B934E4399871940C4 /* DashboardView.swift */; };
-		75D241095BDE46608B1919D5 /* VehicleStatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E70016956AB48FE8D1C44F8 /* VehicleStatusView.swift */; };
-		6EDE7D5AB2104772A497BA7F /* RoutePlannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14716D529A474E468882A093 /* RoutePlannerView.swift */; };
-		87F9822A1BD146159EB09353 /* ChargingPlanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8D56244B3084C428A9C4DCB /* ChargingPlanView.swift */; };
-		DA5DBEC29B96471DB23F6900 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B9241D647DB419BBAC47545 /* SettingsView.swift */; };
-		4E9B5252BCEC40F79FCCB6F3 /* SecureStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8EB7905FABC44439269827D /* SecureStorage.swift */; };
+		16C4953CADB9407AB606D58E /* ZOECarPlayPlannerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7AAD342BE2F47539D86EFFD /* ZOECarPlayPlannerApp.swift */; };
 		18A0F56DDFC7474184FE9443 /* AppError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5682DE2638714F578BB3D70E /* AppError.swift */; };
-		6365FC4DEFA448DBA574E129 /* Config.example.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D1613BE77034BC1B485B341 /* Config.example.swift */; };
-		B825427CBD92408D9A2D3D76 /* ChargingPlannerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 134C66DF85854CABBAA0FD35 /* ChargingPlannerTests.swift */; };
-		57D41BD96E89415DBA6C0D9B /* EnergyConsumptionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2E0FAA35B7C41AAAADF20C7 /* EnergyConsumptionTests.swift */; };
-		E3E13048DF1F4ED28EC59670 /* MockRoutingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15B491D6A84249B98FC7B8BF /* MockRoutingTests.swift */; };
-		8C72172E45AE4303949C5DB4 /* RenaultMapperTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D23AA270CDAE4080B89D8E23 /* RenaultMapperTests.swift */; };
+		1C68655ECF3D4538A1865460 /* CarPlaySceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9E0C2B2713E4BF189BA45BF /* CarPlaySceneDelegate.swift */; };
 		24366A8298B84C1C8C7B5EEF /* MockVehicleServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CCFF37B41FC489FB506B6CF /* MockVehicleServiceTests.swift */; };
+		2A9C137F21794FEEA33539B2 /* Route.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4124CE0B11044118607DD3B /* Route.swift */; };
+		30659E6BADD247E380C44500 /* MockRoutingProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DD8BBEF235F497FB042B870 /* MockRoutingProvider.swift */; };
+		3B75B3C83D364FA488E9F757 /* GoogleRoutingProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C769EDB13BC49E89A722409 /* GoogleRoutingProvider.swift */; };
+		3D2FF996F1564CF886439A64 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A369C8B934E4399871940C4 /* DashboardView.swift */; };
+		4768F7B022D64D169ED24DFC /* RealRenaultVehicleService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF45507A1EF74C0E897C8DE6 /* RealRenaultVehicleService.swift */; };
+		4C710EC76C244C3788C489BD /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AF62AF133054E6EB5DFBBE5 /* ContentView.swift */; };
+		4E9B5252BCEC40F79FCCB6F3 /* SecureStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8EB7905FABC44439269827D /* SecureStorage.swift */; };
+		57D41BD96E89415DBA6C0D9B /* EnergyConsumptionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2E0FAA35B7C41AAAADF20C7 /* EnergyConsumptionTests.swift */; };
+		5DE146D18C27426F8100B118 /* RenaultAuthentication.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CF13E9B15E1411394C74BB8 /* RenaultAuthentication.swift */; };
+		6365FC4DEFA448DBA574E129 /* Config.example.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D1613BE77034BC1B485B341 /* Config.example.swift */; };
+		6EDE7D5AB2104772A497BA7F /* RoutePlannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14716D529A474E468882A093 /* RoutePlannerView.swift */; };
+		702580FDC4C043F8B4C3785A /* CarPlayCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6839C3E4A0E1434A97FEA636 /* CarPlayCoordinator.swift */; };
+		75D241095BDE46608B1919D5 /* VehicleStatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E70016956AB48FE8D1C44F8 /* VehicleStatusView.swift */; };
+		85AE7D9B30BD4207A2E955A7 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EDF2C212F124CC5B17F9083 /* AppState.swift */; };
+		87F9822A1BD146159EB09353 /* ChargingPlanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8D56244B3084C428A9C4DCB /* ChargingPlanView.swift */; };
+		8C72172E45AE4303949C5DB4 /* RenaultMapperTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D23AA270CDAE4080B89D8E23 /* RenaultMapperTests.swift */; };
+		8DBFFB52B83C467CB3323784 /* ChargingStation.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4788FAFBF5F4C4BAB536BD8 /* ChargingStation.swift */; };
+		A9D3B0FF1DAB43048C80FC75 /* ChargingStationProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC2019911561491BA9D062BF /* ChargingStationProvider.swift */; };
+		AADAD6CFC7EA4257B07153E2 /* RoutingProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6B0B68FD8B74148A81C55E2 /* RoutingProvider.swift */; };
+		AC56E6544EF74E9EAD3465C8 /* PlannerSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E6026360E2F4344B3615AD1 /* PlannerSettings.swift */; };
+		B825427CBD92408D9A2D3D76 /* ChargingPlannerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 134C66DF85854CABBAA0FD35 /* ChargingPlannerTests.swift */; };
+		BB0EB1EA258843AA841A2EBE /* Vehicle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 574A673F452149CEA86EDDA7 /* Vehicle.swift */; };
+		D51F673BE39E43DAB5C8190C /* ChargingPlanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24A76E3C9C4C4F368B7DDD89 /* ChargingPlanner.swift */; };
+		D810794E0DC647A5894FD1C3 /* BatteryState.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2CFCF4CDD264F7CAE24602A /* BatteryState.swift */; };
+		DA5DBEC29B96471DB23F6900 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B9241D647DB419BBAC47545 /* SettingsView.swift */; };
+		DD12EA4F33D04D3BB015012C /* AppleRoutingProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E69F199E7524D5984DD0540 /* AppleRoutingProvider.swift */; };
+		E3E13048DF1F4ED28EC59670 /* MockRoutingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15B491D6A84249B98FC7B8BF /* MockRoutingTests.swift */; };
+		EBA1399222234EEFB8869262 /* VehicleServiceProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CA4B652F04948B992C5C3AF /* VehicleServiceProtocol.swift */; };
+		F5E5E5F1CF01449BA2F19F76 /* RenaultAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8805246683C04817973904F6 /* RenaultAPIClient.swift */; };
+		F757E42B1DD9494D81D9848E /* EnergyConsumptionModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6651A707ECA9467AAF569520 /* EnergyConsumptionModel.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		41420C96E26A4BA68427093E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8D5480C515D5455BA0A58F0D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 48E000F155594DCEA8FDCB25;
+			remoteInfo = ZOECarPlayPlanner;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
-		4766BD3E5EF84264902AEB5E /* ZOECarPlayPlanner.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ZOECarPlayPlanner.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		947D6A7CB4524F34A66BD04B /* ZOECarPlayPlannerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ZOECarPlayPlannerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		9DAE83B4B2E447E4AD20C69D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		FA5AE8C6BDD541068148AAB9 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		C7AAD342BE2F47539D86EFFD /* ZOECarPlayPlannerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZOECarPlayPlannerApp.swift; sourceTree = "<group>"; };
-		5EDF2C212F124CC5B17F9083 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
-		574A673F452149CEA86EDDA7 /* Vehicle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Vehicle.swift; sourceTree = "<group>"; };
-		E2CFCF4CDD264F7CAE24602A /* BatteryState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatteryState.swift; sourceTree = "<group>"; };
-		F4124CE0B11044118607DD3B /* Route.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Route.swift; sourceTree = "<group>"; };
-		4B66841D10BD43EC81905DF2 /* ChargingStop.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChargingStop.swift; sourceTree = "<group>"; };
-		F4788FAFBF5F4C4BAB536BD8 /* ChargingStation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChargingStation.swift; sourceTree = "<group>"; };
-		0E6026360E2F4344B3615AD1 /* PlannerSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlannerSettings.swift; sourceTree = "<group>"; };
-		2CA4B652F04948B992C5C3AF /* VehicleServiceProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehicleServiceProtocol.swift; sourceTree = "<group>"; };
-		EEFCD70B5414461A9B9A3E6E /* MockRenaultVehicleService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockRenaultVehicleService.swift; sourceTree = "<group>"; };
-		BF45507A1EF74C0E897C8DE6 /* RealRenaultVehicleService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealRenaultVehicleService.swift; sourceTree = "<group>"; };
-		6CF13E9B15E1411394C74BB8 /* RenaultAuthentication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RenaultAuthentication.swift; sourceTree = "<group>"; };
-		8805246683C04817973904F6 /* RenaultAPIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RenaultAPIClient.swift; sourceTree = "<group>"; };
-		D6B0B68FD8B74148A81C55E2 /* RoutingProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutingProvider.swift; sourceTree = "<group>"; };
-		2DD8BBEF235F497FB042B870 /* MockRoutingProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockRoutingProvider.swift; sourceTree = "<group>"; };
-		4E69F199E7524D5984DD0540 /* AppleRoutingProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleRoutingProvider.swift; sourceTree = "<group>"; };
-		9C769EDB13BC49E89A722409 /* GoogleRoutingProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleRoutingProvider.swift; sourceTree = "<group>"; };
-		24A76E3C9C4C4F368B7DDD89 /* ChargingPlanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChargingPlanner.swift; sourceTree = "<group>"; };
-		6651A707ECA9467AAF569520 /* EnergyConsumptionModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnergyConsumptionModel.swift; sourceTree = "<group>"; };
-		7BC2CD6EABA842D180EBB18E /* ChargingStrategy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChargingStrategy.swift; sourceTree = "<group>"; };
-		EC2019911561491BA9D062BF /* ChargingStationProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChargingStationProvider.swift; sourceTree = "<group>"; };
-		E9E0C2B2713E4BF189BA45BF /* CarPlaySceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarPlaySceneDelegate.swift; sourceTree = "<group>"; };
-		6839C3E4A0E1434A97FEA636 /* CarPlayCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarPlayCoordinator.swift; sourceTree = "<group>"; };
-		5AF62AF133054E6EB5DFBBE5 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
-		3A369C8B934E4399871940C4 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
-		2E70016956AB48FE8D1C44F8 /* VehicleStatusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehicleStatusView.swift; sourceTree = "<group>"; };
-		14716D529A474E468882A093 /* RoutePlannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutePlannerView.swift; sourceTree = "<group>"; };
-		F8D56244B3084C428A9C4DCB /* ChargingPlanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChargingPlanView.swift; sourceTree = "<group>"; };
 		0B9241D647DB419BBAC47545 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
-		F8EB7905FABC44439269827D /* SecureStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureStorage.swift; sourceTree = "<group>"; };
-		5682DE2638714F578BB3D70E /* AppError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppError.swift; sourceTree = "<group>"; };
-		8D1613BE77034BC1B485B341 /* Config.example.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.example.swift; sourceTree = "<group>"; };
+		0E6026360E2F4344B3615AD1 /* PlannerSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlannerSettings.swift; sourceTree = "<group>"; };
 		134C66DF85854CABBAA0FD35 /* ChargingPlannerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChargingPlannerTests.swift; sourceTree = "<group>"; };
-		F2E0FAA35B7C41AAAADF20C7 /* EnergyConsumptionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnergyConsumptionTests.swift; sourceTree = "<group>"; };
+		14716D529A474E468882A093 /* RoutePlannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutePlannerView.swift; sourceTree = "<group>"; };
 		15B491D6A84249B98FC7B8BF /* MockRoutingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockRoutingTests.swift; sourceTree = "<group>"; };
-		D23AA270CDAE4080B89D8E23 /* RenaultMapperTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RenaultMapperTests.swift; sourceTree = "<group>"; };
+		24A76E3C9C4C4F368B7DDD89 /* ChargingPlanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChargingPlanner.swift; sourceTree = "<group>"; };
+		2CA4B652F04948B992C5C3AF /* VehicleServiceProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehicleServiceProtocol.swift; sourceTree = "<group>"; };
 		2CCFF37B41FC489FB506B6CF /* MockVehicleServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockVehicleServiceTests.swift; sourceTree = "<group>"; };
+		2DD8BBEF235F497FB042B870 /* MockRoutingProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockRoutingProvider.swift; sourceTree = "<group>"; };
+		2E70016956AB48FE8D1C44F8 /* VehicleStatusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehicleStatusView.swift; sourceTree = "<group>"; };
+		3A369C8B934E4399871940C4 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
+		4766BD3E5EF84264902AEB5E /* ZOECarPlayPlanner.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ZOECarPlayPlanner.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		4B66841D10BD43EC81905DF2 /* ChargingStop.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChargingStop.swift; sourceTree = "<group>"; };
+		4E69F199E7524D5984DD0540 /* AppleRoutingProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleRoutingProvider.swift; sourceTree = "<group>"; };
+		5682DE2638714F578BB3D70E /* AppError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppError.swift; sourceTree = "<group>"; };
+		574A673F452149CEA86EDDA7 /* Vehicle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Vehicle.swift; sourceTree = "<group>"; };
+		5AF62AF133054E6EB5DFBBE5 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		5EDF2C212F124CC5B17F9083 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		6651A707ECA9467AAF569520 /* EnergyConsumptionModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnergyConsumptionModel.swift; sourceTree = "<group>"; };
+		6839C3E4A0E1434A97FEA636 /* CarPlayCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarPlayCoordinator.swift; sourceTree = "<group>"; };
+		6CF13E9B15E1411394C74BB8 /* RenaultAuthentication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RenaultAuthentication.swift; sourceTree = "<group>"; };
+		7BC2CD6EABA842D180EBB18E /* ChargingStrategy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChargingStrategy.swift; sourceTree = "<group>"; };
+		8805246683C04817973904F6 /* RenaultAPIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RenaultAPIClient.swift; sourceTree = "<group>"; };
+		8D1613BE77034BC1B485B341 /* Config.example.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.example.swift; sourceTree = "<group>"; };
+		947D6A7CB4524F34A66BD04B /* ZOECarPlayPlannerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ZOECarPlayPlannerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		9C769EDB13BC49E89A722409 /* GoogleRoutingProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleRoutingProvider.swift; sourceTree = "<group>"; };
+		9DAE83B4B2E447E4AD20C69D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		BF45507A1EF74C0E897C8DE6 /* RealRenaultVehicleService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealRenaultVehicleService.swift; sourceTree = "<group>"; };
+		C7AAD342BE2F47539D86EFFD /* ZOECarPlayPlannerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZOECarPlayPlannerApp.swift; sourceTree = "<group>"; };
+		D23AA270CDAE4080B89D8E23 /* RenaultMapperTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RenaultMapperTests.swift; sourceTree = "<group>"; };
+		D6B0B68FD8B74148A81C55E2 /* RoutingProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutingProvider.swift; sourceTree = "<group>"; };
+		E2CFCF4CDD264F7CAE24602A /* BatteryState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatteryState.swift; sourceTree = "<group>"; };
+		E9E0C2B2713E4BF189BA45BF /* CarPlaySceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarPlaySceneDelegate.swift; sourceTree = "<group>"; };
+		EC2019911561491BA9D062BF /* ChargingStationProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChargingStationProvider.swift; sourceTree = "<group>"; };
+		EEFCD70B5414461A9B9A3E6E /* MockRenaultVehicleService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockRenaultVehicleService.swift; sourceTree = "<group>"; };
+		F2E0FAA35B7C41AAAADF20C7 /* EnergyConsumptionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnergyConsumptionTests.swift; sourceTree = "<group>"; };
+		F4124CE0B11044118607DD3B /* Route.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Route.swift; sourceTree = "<group>"; };
+		F4788FAFBF5F4C4BAB536BD8 /* ChargingStation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChargingStation.swift; sourceTree = "<group>"; };
+		F8D56244B3084C428A9C4DCB /* ChargingPlanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChargingPlanView.swift; sourceTree = "<group>"; };
+		F8EB7905FABC44439269827D /* SecureStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureStorage.swift; sourceTree = "<group>"; };
+		FA5AE8C6BDD541068148AAB9 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -108,6 +118,107 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		01E5FCC72EF74DF683772458 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				5AF62AF133054E6EB5DFBBE5 /* ContentView.swift */,
+				3A369C8B934E4399871940C4 /* DashboardView.swift */,
+				2E70016956AB48FE8D1C44F8 /* VehicleStatusView.swift */,
+				14716D529A474E468882A093 /* RoutePlannerView.swift */,
+				F8D56244B3084C428A9C4DCB /* ChargingPlanView.swift */,
+				0B9241D647DB419BBAC47545 /* SettingsView.swift */,
+			);
+			name = Views;
+			path = ZOECarPlayPlanner/Views;
+			sourceTree = "<group>";
+		};
+		06D5C5FD5277499E93104BBE /* CarPlay */ = {
+			isa = PBXGroup;
+			children = (
+				E9E0C2B2713E4BF189BA45BF /* CarPlaySceneDelegate.swift */,
+				6839C3E4A0E1434A97FEA636 /* CarPlayCoordinator.swift */,
+			);
+			name = CarPlay;
+			path = ZOECarPlayPlanner/CarPlay;
+			sourceTree = "<group>";
+		};
+		19EB7DE9D1694FF092EBDB40 /* Renault */ = {
+			isa = PBXGroup;
+			children = (
+				EEFCD70B5414461A9B9A3E6E /* MockRenaultVehicleService.swift */,
+				BF45507A1EF74C0E897C8DE6 /* RealRenaultVehicleService.swift */,
+				6CF13E9B15E1411394C74BB8 /* RenaultAuthentication.swift */,
+				8805246683C04817973904F6 /* RenaultAPIClient.swift */,
+			);
+			name = Renault;
+			path = ZOECarPlayPlanner/Renault;
+			sourceTree = "<group>";
+		};
+		393A8D699A0E44F29E73CDA9 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				4766BD3E5EF84264902AEB5E /* ZOECarPlayPlanner.app */,
+				947D6A7CB4524F34A66BD04B /* ZOECarPlayPlannerTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		50D22FBA62A74EACA9BD80F4 /* ZOECarPlayPlannerTests */ = {
+			isa = PBXGroup;
+			children = (
+				FA5AE8C6BDD541068148AAB9 /* Info.plist */,
+				134C66DF85854CABBAA0FD35 /* ChargingPlannerTests.swift */,
+				F2E0FAA35B7C41AAAADF20C7 /* EnergyConsumptionTests.swift */,
+				15B491D6A84249B98FC7B8BF /* MockRoutingTests.swift */,
+				D23AA270CDAE4080B89D8E23 /* RenaultMapperTests.swift */,
+				2CCFF37B41FC489FB506B6CF /* MockVehicleServiceTests.swift */,
+			);
+			path = ZOECarPlayPlannerTests;
+			sourceTree = "<group>";
+		};
+		5475DD50E53A4FC39ECDE409 /* Routing */ = {
+			isa = PBXGroup;
+			children = (
+				D6B0B68FD8B74148A81C55E2 /* RoutingProvider.swift */,
+				2DD8BBEF235F497FB042B870 /* MockRoutingProvider.swift */,
+				4E69F199E7524D5984DD0540 /* AppleRoutingProvider.swift */,
+				9C769EDB13BC49E89A722409 /* GoogleRoutingProvider.swift */,
+			);
+			name = Routing;
+			path = ZOECarPlayPlanner/Routing;
+			sourceTree = "<group>";
+		};
+		5810072ED4F84E8CAA0D689B /* Utilities */ = {
+			isa = PBXGroup;
+			children = (
+				F8EB7905FABC44439269827D /* SecureStorage.swift */,
+				5682DE2638714F578BB3D70E /* AppError.swift */,
+				8D1613BE77034BC1B485B341 /* Config.example.swift */,
+			);
+			name = Utilities;
+			path = ZOECarPlayPlanner/Utilities;
+			sourceTree = "<group>";
+		};
+		92012F886BE64E8F8C8DE280 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				2CA4B652F04948B992C5C3AF /* VehicleServiceProtocol.swift */,
+			);
+			name = Services;
+			path = ZOECarPlayPlanner/Services;
+			sourceTree = "<group>";
+		};
+		BA16EE8562784A7C8CE9E5C2 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				9DAE83B4B2E447E4AD20C69D /* Info.plist */,
+				C7AAD342BE2F47539D86EFFD /* ZOECarPlayPlannerApp.swift */,
+				5EDF2C212F124CC5B17F9083 /* AppState.swift */,
+			);
+			name = App;
+			path = ZOECarPlayPlanner/App;
+			sourceTree = "<group>";
+		};
 		D6B7EAC39E744EC8AE443EB6 = {
 			isa = PBXGroup;
 			children = (
@@ -125,25 +236,6 @@
 			);
 			sourceTree = "<group>";
 		};
-		393A8D699A0E44F29E73CDA9 /* Products */ = {
-			isa = PBXGroup;
-			children = (
-				4766BD3E5EF84264902AEB5E /* ZOECarPlayPlanner.app */,
-				947D6A7CB4524F34A66BD04B /* ZOECarPlayPlannerTests.xctest */,
-			);
-			name = Products;
-			sourceTree = "<group>";
-		};
-		BA16EE8562784A7C8CE9E5C2 /* App */ = {
-			isa = PBXGroup;
-			children = (
-				9DAE83B4B2E447E4AD20C69D /* Info.plist */,
-				C7AAD342BE2F47539D86EFFD /* ZOECarPlayPlannerApp.swift */,
-				5EDF2C212F124CC5B17F9083 /* AppState.swift */,
-			);
-			path = App;
-			sourceTree = "<group>";
-		};
 		ECA489666CB441BE90AA5448 /* Models */ = {
 			isa = PBXGroup;
 			children = (
@@ -154,37 +246,8 @@
 				F4788FAFBF5F4C4BAB536BD8 /* ChargingStation.swift */,
 				0E6026360E2F4344B3615AD1 /* PlannerSettings.swift */,
 			);
-			path = Models;
-			sourceTree = "<group>";
-		};
-		92012F886BE64E8F8C8DE280 /* Services */ = {
-			isa = PBXGroup;
-			children = (
-				2CA4B652F04948B992C5C3AF /* VehicleServiceProtocol.swift */,
-			);
-			path = Services;
-			sourceTree = "<group>";
-		};
-		19EB7DE9D1694FF092EBDB40 /* Renault */ = {
-			isa = PBXGroup;
-			children = (
-				EEFCD70B5414461A9B9A3E6E /* MockRenaultVehicleService.swift */,
-				BF45507A1EF74C0E897C8DE6 /* RealRenaultVehicleService.swift */,
-				6CF13E9B15E1411394C74BB8 /* RenaultAuthentication.swift */,
-				8805246683C04817973904F6 /* RenaultAPIClient.swift */,
-			);
-			path = Renault;
-			sourceTree = "<group>";
-		};
-		5475DD50E53A4FC39ECDE409 /* Routing */ = {
-			isa = PBXGroup;
-			children = (
-				D6B0B68FD8B74148A81C55E2 /* RoutingProvider.swift */,
-				2DD8BBEF235F497FB042B870 /* MockRoutingProvider.swift */,
-				4E69F199E7524D5984DD0540 /* AppleRoutingProvider.swift */,
-				9C769EDB13BC49E89A722409 /* GoogleRoutingProvider.swift */,
-			);
-			path = Routing;
+			name = Models;
+			path = ZOECarPlayPlanner/Models;
 			sourceTree = "<group>";
 		};
 		FFEA9F98CCC44521AB01937B /* Charging */ = {
@@ -195,52 +258,8 @@
 				7BC2CD6EABA842D180EBB18E /* ChargingStrategy.swift */,
 				EC2019911561491BA9D062BF /* ChargingStationProvider.swift */,
 			);
-			path = Charging;
-			sourceTree = "<group>";
-		};
-		06D5C5FD5277499E93104BBE /* CarPlay */ = {
-			isa = PBXGroup;
-			children = (
-				E9E0C2B2713E4BF189BA45BF /* CarPlaySceneDelegate.swift */,
-				6839C3E4A0E1434A97FEA636 /* CarPlayCoordinator.swift */,
-			);
-			path = CarPlay;
-			sourceTree = "<group>";
-		};
-		01E5FCC72EF74DF683772458 /* Views */ = {
-			isa = PBXGroup;
-			children = (
-				5AF62AF133054E6EB5DFBBE5 /* ContentView.swift */,
-				3A369C8B934E4399871940C4 /* DashboardView.swift */,
-				2E70016956AB48FE8D1C44F8 /* VehicleStatusView.swift */,
-				14716D529A474E468882A093 /* RoutePlannerView.swift */,
-				F8D56244B3084C428A9C4DCB /* ChargingPlanView.swift */,
-				0B9241D647DB419BBAC47545 /* SettingsView.swift */,
-			);
-			path = Views;
-			sourceTree = "<group>";
-		};
-		5810072ED4F84E8CAA0D689B /* Utilities */ = {
-			isa = PBXGroup;
-			children = (
-				F8EB7905FABC44439269827D /* SecureStorage.swift */,
-				5682DE2638714F578BB3D70E /* AppError.swift */,
-				8D1613BE77034BC1B485B341 /* Config.example.swift */,
-			);
-			path = Utilities;
-			sourceTree = "<group>";
-		};
-		50D22FBA62A74EACA9BD80F4 /* ZOECarPlayPlannerTests */ = {
-			isa = PBXGroup;
-			children = (
-				FA5AE8C6BDD541068148AAB9 /* Info.plist */,
-				134C66DF85854CABBAA0FD35 /* ChargingPlannerTests.swift */,
-				F2E0FAA35B7C41AAAADF20C7 /* EnergyConsumptionTests.swift */,
-				15B491D6A84249B98FC7B8BF /* MockRoutingTests.swift */,
-				D23AA270CDAE4080B89D8E23 /* RenaultMapperTests.swift */,
-				2CCFF37B41FC489FB506B6CF /* MockVehicleServiceTests.swift */,
-			);
-			path = ZOECarPlayPlannerTests;
+			name = Charging;
+			path = ZOECarPlayPlanner/Charging;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -248,7 +267,7 @@
 /* Begin PBXNativeTarget section */
 		48E000F155594DCEA8FDCB25 /* ZOECarPlayPlanner */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = E53AADB62991461BB67DC135;
+			buildConfigurationList = E53AADB62991461BB67DC135 /* Build configuration list for PBXNativeTarget "ZOECarPlayPlanner" */;
 			buildPhases = (
 				43BB03A605D04C7CA6ADB762 /* Sources */,
 				3D1918D1222A4AB0B9018473 /* Frameworks */,
@@ -260,12 +279,12 @@
 			);
 			name = ZOECarPlayPlanner;
 			productName = ZOECarPlayPlanner;
-			productReference = 4766BD3E5EF84264902AEB5E;
+			productReference = 4766BD3E5EF84264902AEB5E /* ZOECarPlayPlanner.app */;
 			productType = "com.apple.product-type.application";
 		};
 		727D0BE0F6404B8D9F8B7102 /* ZOECarPlayPlannerTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 4A4700BB91CF4EAC966622D7;
+			buildConfigurationList = 4A4700BB91CF4EAC966622D7 /* Build configuration list for PBXNativeTarget "ZOECarPlayPlannerTests" */;
 			buildPhases = (
 				A3643886CBE343B789384FF1 /* Sources */,
 				64F43F71769C45849861F1CC /* Frameworks */,
@@ -273,32 +292,14 @@
 			buildRules = (
 			);
 			dependencies = (
-				2F71052379CA444FA0BC4D6C,
+				2F71052379CA444FA0BC4D6C /* PBXTargetDependency */,
 			);
 			name = ZOECarPlayPlannerTests;
 			productName = ZOECarPlayPlannerTests;
-			productReference = 947D6A7CB4524F34A66BD04B;
+			productReference = 947D6A7CB4524F34A66BD04B /* ZOECarPlayPlannerTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
-
-/* Begin PBXContainerItemProxy section */
-		41420C96E26A4BA68427093E /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 8D5480C515D5455BA0A58F0D /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 48E000F155594DCEA8FDCB25;
-			remoteInfo = ZOECarPlayPlanner;
-		};
-/* End PBXContainerItemProxy section */
-
-/* Begin PBXTargetDependency section */
-		2F71052379CA444FA0BC4D6C /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 48E000F155594DCEA8FDCB25 /* ZOECarPlayPlanner */;
-			targetProxy = 41420C96E26A4BA68427093E /* PBXContainerItemProxy */;
-		};
-/* End PBXTargetDependency section */
 
 /* Begin PBXProject section */
 		8D5480C515D5455BA0A58F0D /* Project object */ = {
@@ -306,9 +307,9 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1600;
-				LastUpgradeCheck = 1600;
+				LastUpgradeCheck = 1620;
 			};
-			buildConfigurationList = 68E70E628E7A460584F305AE;
+			buildConfigurationList = 68E70E628E7A460584F305AE /* Build configuration list for PBXProject "ZOECarPlayPlanner" */;
 			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = fr;
 			hasScannedForEncodings = 0;
@@ -392,11 +393,67 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		2F71052379CA444FA0BC4D6C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 48E000F155594DCEA8FDCB25 /* ZOECarPlayPlanner */;
+			targetProxy = 41420C96E26A4BA68427093E /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		22526289A829443C9E4EBEC1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = MDLZG8NQNK;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ZOECarPlayPlanner/App/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.navigation";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.zoecarplayplanner.app;
+				PRODUCT_NAME = ZOECarPlayPlanner;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		4C9027D17FF84D1AAB4DE70C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 6.0;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 		991A3795E44B449AA78A95BB /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
@@ -429,11 +486,15 @@
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
-				GCC_PREPROCESSOR_DEFINITIONS = ("DEBUG=1", "$(inherited)",);
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNDECLARED_SELECTOR = YES;
@@ -451,40 +512,15 @@
 			};
 			name = Debug;
 		};
-		4C9027D17FF84D1AAB4DE70C /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				COPY_PHASE_STRIP = NO;
-				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				ENABLE_NS_ASSERTIONS = NO;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu11;
-				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MTL_ENABLE_DEBUG_INFO = NO;
-				MTL_FAST_MATH = YES;
-				SDKROOT = iphoneos;
-				SWIFT_COMPILATION_MODE = wholemodule;
-				SWIFT_OPTIMIZATION_LEVEL = "-O";
-				SWIFT_VERSION = 6.0;
-				VALIDATE_PRODUCT = YES;
-			};
-			name = Release;
-		};
 		9BEF91E93F4D44AEB546F0DA /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASCETIC_TOOL_PATH = "";
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = MDLZG8NQNK;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ZOECarPlayPlanner/App/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.navigation";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LE_SWIFT_VERSION = 6.0;
 				MARKETING_VERSION = 1.0;
@@ -493,39 +529,6 @@
 				SDKROOT = iphoneos;
 				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Debug;
-		};
-		22526289A829443C9E4EBEC1 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CURRENT_PROJECT_VERSION = 1;
-				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = ZOECarPlayPlanner/App/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.zoecarplayplanner.app;
-				PRODUCT_NAME = ZOECarPlayPlanner;
-				SDKROOT = iphoneos;
-				SWIFT_VERSION = 6.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Release;
-		};
-		C3055891598E4731B2173292 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CURRENT_PROJECT_VERSION = 1;
-				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.zoecarplayplanner.tests;
-				PRODUCT_NAME = ZOECarPlayPlannerTests;
-				SDKROOT = iphoneos;
-				SWIFT_VERSION = 6.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ZOECarPlayPlanner.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/ZOECarPlayPlanner";
 			};
 			name = Debug;
 		};
@@ -546,9 +549,35 @@
 			};
 			name = Release;
 		};
+		C3055891598E4731B2173292 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.zoecarplayplanner.tests;
+				PRODUCT_NAME = ZOECarPlayPlannerTests;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ZOECarPlayPlanner.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/ZOECarPlayPlanner";
+			};
+			name = Debug;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		4A4700BB91CF4EAC966622D7 /* Build configuration list for PBXNativeTarget "ZOECarPlayPlannerTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C3055891598E4731B2173292 /* Debug */,
+				B19C0CAF1AA64D2D82AEAB37 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		68E70E628E7A460584F305AE /* Build configuration list for PBXProject "ZOECarPlayPlanner" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -567,17 +596,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		4A4700BB91CF4EAC966622D7 /* Build configuration list for PBXNativeTarget "ZOECarPlayPlannerTests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				C3055891598E4731B2173292 /* Debug */,
-				B19C0CAF1AA64D2D82AEAB37 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
 /* End XCConfigurationList section */
-
 	};
 	rootObject = 8D5480C515D5455BA0A58F0D /* Project object */;
 }

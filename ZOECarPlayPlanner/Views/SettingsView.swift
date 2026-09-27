@@ -14,77 +14,98 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
-                // ── Connexion Renault ──────────────────────────────────────
-                Section {
-                    if appState.isAuthenticated {
-                        authenticatedRow
-                    } else {
-                        loginForm
-                    }
-                } header: {
-                    Label("Compte Renault / MyRenault", systemImage: "person.badge.key.fill")
-                }
-
-                // ── Mode simulation ────────────────────────────────────────
-                Section("Mode simulation") {
-                    Toggle("Activer le mode simulation", isOn: $appState.settings.useSimulationMode)
-                        .tint(.orange)
-
-                    if appState.settings.useSimulationMode {
-                        Picker("Scénario", selection: $selectedScenario) {
-                            ForEach(SimulationScenario.allCases) { scenario in
-                                Text(scenario.rawValue).tag(scenario)
-                            }
-                        }
-                        .onChange(of: selectedScenario) { _, _ in
-                            Task { await appState.refreshVehicleStatus() }
-                        }
-                    }
-                }
-
-                // ── Consommation ───────────────────────────────────────────
-                Section("Consommation") {
-                    VStack(alignment: .leading) {
-                        HStack {
-                            Text("Consommation")
-                            Spacer()
-                            Text("\(Int(appState.settings.consumptionWhPerKm)) Wh/km")
-                                .foregroundStyle(.secondary)
-                        }
-                        Slider(value: $appState.settings.consumptionWhPerKm, in: 100...300, step: 5)
-                            .tint(.green)
-                    }
-                }
-
-                // ── Stratégie de recharge ──────────────────────────────────
-                Section("Stratégie de recharge") {
-                    socSlider(label: "Batterie minimale à l'arrivée",
-                              value: $appState.settings.minBatteryAtArrivalPercent,
-                              range: 5...30, tint: .orange)
-                    socSlider(label: "SOC cible après recharge",
-                              value: $appState.settings.maxBatteryAfterChargePercent,
-                              range: 50...100, tint: .green)
-                    socSlider(label: "Marge de sécurité",
-                              value: $appState.settings.safetyMarginPercent,
-                              range: 0...20, tint: .blue)
-                }
-
-                // ── Véhicule ───────────────────────────────────────────────
-                Section("Véhicule") {
-                    LabeledContent("Modèle", value: appState.settings.vehicle.model)
-                    LabeledContent("Batterie utilisable",
-                                   value: "\(appState.settings.vehicle.usableBatteryKWh, specifier: "%.0f") kWh")
-                }
-
-                // ── Sauvegarde ─────────────────────────────────────────────
-                Section {
-                    Button("Enregistrer les réglages") {
-                        appState.settings.save()
-                    }
-                    .foregroundStyle(.green)
-                }
+                renaultSection
+                simulationSection
+                consumptionSection
+                chargingStrategySection
+                vehicleSection
+                saveSection
             }
             .navigationTitle("Réglages")
+        }
+    }
+
+    @ViewBuilder private var renaultSection: some View {
+        Section {
+            if appState.isAuthenticated {
+                authenticatedRow
+            } else {
+                loginForm
+            }
+        } header: {
+            Label("Compte Renault / MyRenault", systemImage: "person.badge.key.fill")
+        }
+    }
+
+    @ViewBuilder private var simulationSection: some View {
+        Section("Mode simulation") {
+            Toggle("Activer le mode simulation", isOn: $appState.settings.useSimulationMode)
+                .tint(.orange)
+            if appState.settings.useSimulationMode {
+                Picker("Scénario", selection: $selectedScenario) {
+                    ForEach(SimulationScenario.allCases) { scenario in
+                        Text(scenario.rawValue).tag(scenario)
+                    }
+                }
+                .onChange(of: selectedScenario) { _, _ in
+                    Task { await appState.refreshVehicleStatus() }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder private var consumptionSection: some View {
+        Section("Consommation") {
+            VStack(alignment: .leading) {
+                HStack {
+                    Text("Consommation")
+                    Spacer()
+                    Text("\(Int(appState.settings.consumptionWhPerKm)) Wh/km")
+                        .foregroundStyle(.secondary)
+                }
+                Slider(value: $appState.settings.consumptionWhPerKm, in: 100...300, step: 5)
+                    .tint(.green)
+            }
+        }
+    }
+
+    @ViewBuilder private var chargingStrategySection: some View {
+        Section("Stratégie de recharge") {
+            socSlider(label: "Batterie minimale à l'arrivée",
+                      value: $appState.settings.minBatteryAtArrivalPercent,
+                      range: 5...30, tint: .orange)
+            socSlider(label: "SOC cible après recharge",
+                      value: $appState.settings.maxBatteryAfterChargePercent,
+                      range: 50...100, tint: .green)
+            socSlider(label: "Marge de sécurité",
+                      value: $appState.settings.safetyMarginPercent,
+                      range: 0...20, tint: .blue)
+        }
+    }
+
+    @ViewBuilder private var vehicleSection: some View {
+        Section("Véhicule") {
+            HStack {
+                Text("Modèle")
+                Spacer()
+                Text(appState.settings.vehicle.model)
+                    .foregroundStyle(.secondary)
+            }
+            HStack {
+                Text("Batterie utilisable")
+                Spacer()
+                Text(String(format: "%.0f kWh", appState.settings.vehicle.usableBatteryKWh))
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    @ViewBuilder private var saveSection: some View {
+        Section {
+            Button("Enregistrer les réglages") {
+                appState.settings.save()
+            }
+            .foregroundStyle(.green)
         }
     }
 
@@ -104,7 +125,9 @@ struct SettingsView: View {
             }
             Spacer()
             Button("Déconnecter") {
-                appState.disconnectRenault()
+                Task {
+                    await appState.disconnectRenault()
+                }
                 emailInput = ""
                 passwordInput = ""
                 vinInput = ""
