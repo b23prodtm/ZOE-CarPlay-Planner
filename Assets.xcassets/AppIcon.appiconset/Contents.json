@@ -1,7 +1,7 @@
 {
   "images" : [
     {
-      "filename" : "Gemini_Generated_Image_tnua35tnua35tnua.jpg",
+      "filename" : "zoe-carplay-planner.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -13,7 +13,7 @@
           "value" : "dark"
         }
       ],
-      "filename" : "Gemini_Generated_Image_t90jhat90jhat90j(2).jpg",
+      "filename" : "zoe-carplay-planner-dark.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -25,7 +25,7 @@
           "value" : "tinted"
         }
       ],
-      "filename" : "Gemini_Generated_Image_t90jhat90jhat90j(1) 1.jpg",
+      "filename" : "zoe-carplay-planner-light.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"

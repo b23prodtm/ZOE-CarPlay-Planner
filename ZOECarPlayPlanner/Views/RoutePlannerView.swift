@@ -1,6 +1,6 @@
 import SwiftUI
 import CoreLocation
-import MapKit
+@preconcurrency import MapKit
 
 private let plannerDefaultRegion = MKCoordinateRegion(
     center: CLLocationCoordinate2D(latitude: 46.4, longitude: 4.7),
@@ -554,8 +554,7 @@ private struct LocationPickerSheet: View {
     let allowsCurrentLocation: Bool
     @ObservedObject var locationManager: PlannerLocationManager
     let onSelect: (TripPlace) -> Void
-
-    private let geocoder = CLGeocoder()
+    
     @StateObject private var searchService = LocationSearchService()
     @State private var searchText: String = ""
     @State private var mapPosition: MapCameraPosition = .region(plannerDefaultRegion)
@@ -702,9 +701,16 @@ private struct LocationPickerSheet: View {
         }
     }
 
-    private func reverseGeocodedName(for coordinate: CLLocationCoordinate2D) async throws -> String {
+    private func reverseGeocodedName(
+        for coordinate: CLLocationCoordinate2D
+    ) async throws -> String {
+        let geocoder = CLGeocoder()
+
         let placemarks = try await geocoder.reverseGeocodeLocation(
-            CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+            CLLocation(
+                latitude: coordinate.latitude,
+                longitude: coordinate.longitude
+            )
         )
 
         if let placemark = placemarks.first {
@@ -721,7 +727,11 @@ private struct LocationPickerSheet: View {
             }
         }
 
-        return String(format: "%.5f, %.5f", coordinate.latitude, coordinate.longitude)
+        return String(
+            format: "%.5f, %.5f",
+            coordinate.latitude,
+            coordinate.longitude
+        )
     }
 }
 
@@ -744,7 +754,10 @@ private final class PlannerLocationManager: NSObject, ObservableObject, CLLocati
             throw NSError(
                 domain: "PlannerLocationManager",
                 code: 3,
-                userInfo: [NSLocalizedDescriptionKey: "Une demande de position GPS est déjà en cours."]
+                userInfo: [
+                    NSLocalizedDescriptionKey:
+                        "Une demande de position GPS est déjà en cours."
+                ]
             )
         }
 
@@ -752,11 +765,15 @@ private final class PlannerLocationManager: NSObject, ObservableObject, CLLocati
             try await requestAuthorizationIfNeeded()
         }
 
-        guard authorizationStatus != .denied, authorizationStatus != .restricted else {
+        guard authorizationStatus != .denied,
+              authorizationStatus != .restricted else {
             throw NSError(
                 domain: "PlannerLocationManager",
                 code: 1,
-                userInfo: [NSLocalizedDescriptionKey: "L’accès à la position GPS est refusé."]
+                userInfo: [
+                    NSLocalizedDescriptionKey:
+                        "L’accès à la position GPS est refusé."
+                ]
             )
         }
 
@@ -766,58 +783,109 @@ private final class PlannerLocationManager: NSObject, ObservableObject, CLLocati
         }
     }
 
-    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
-        authorizationStatus = manager.authorizationStatus
-        switch manager.authorizationStatus {
+    // CLLocationManagerDelegate callbacks are nonisolated in Swift 6.
+    // Hop back to MainActor before touching actor-isolated state.
+    nonisolated func locationManagerDidChangeAuthorization(
+        _ manager: CLLocationManager
+    ) {
+        let status = manager.authorizationStatus
+
+        Task { @MainActor [weak self] in
+            self?.handleAuthorizationChange(status)
+        }
+    }
+
+    private func handleAuthorizationChange(
+        _ status: CLAuthorizationStatus
+    ) {
+        authorizationStatus = status
+
+        switch status {
         case .authorizedAlways, .authorizedWhenInUse:
             authorizationContinuation?.resume(returning: ())
             authorizationContinuation = nil
+
         case .denied, .restricted:
             authorizationContinuation?.resume(
                 throwing: NSError(
                     domain: "PlannerLocationManager",
                     code: 1,
-                    userInfo: [NSLocalizedDescriptionKey: "L’accès à la position GPS est refusé."]
+                    userInfo: [
+                        NSLocalizedDescriptionKey:
+                            "L’accès à la position GPS est refusé."
+                    ]
                 )
             )
             authorizationContinuation = nil
+
         case .notDetermined:
             break
+
         @unknown default:
             authorizationContinuation?.resume(returning: ())
             authorizationContinuation = nil
         }
     }
 
-    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+    nonisolated func locationManager(
+        _ manager: CLLocationManager,
+        didUpdateLocations locations: [CLLocation]
+    ) {
         guard let coordinate = locations.last?.coordinate else {
-            continuation?.resume(
-                throwing: NSError(
-                    domain: "PlannerLocationManager",
-                    code: 2,
-                    userInfo: [NSLocalizedDescriptionKey: "Position GPS indisponible."]
+            Task { @MainActor [weak self] in
+                self?.handleLocationError(
+                    NSError(
+                        domain: "PlannerLocationManager",
+                        code: 2,
+                        userInfo: [
+                            NSLocalizedDescriptionKey:
+                                "Position GPS indisponible."
+                        ]
+                    )
                 )
-            )
-            continuation = nil
+            }
             return
         }
 
+        Task { @MainActor [weak self] in
+            self?.handleLocationUpdate(coordinate)
+        }
+    }
+
+    private func handleLocationUpdate(
+        _ coordinate: CLLocationCoordinate2D
+    ) {
         continuation?.resume(returning: coordinate)
         continuation = nil
     }
 
-    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+    nonisolated func locationManager(
+        _ manager: CLLocationManager,
+        didFailWithError error: Error
+    ) {
+        Task { @MainActor [weak self] in
+            self?.handleLocationError(error)
+        }
+    }
+
+    private func handleLocationError(_ error: Error) {
         continuation?.resume(throwing: error)
         continuation = nil
     }
 
     private func requestAuthorizationIfNeeded() async throws {
-        guard authorizationStatus == .notDetermined else { return }
+        guard authorizationStatus == .notDetermined else {
+            return
+        }
+
         guard authorizationContinuation == nil else {
             throw NSError(
                 domain: "PlannerLocationManager",
                 code: 4,
-                userInfo: [NSLocalizedDescriptionKey: "Une demande d’autorisation GPS est déjà en cours."]
+                userInfo: [
+                    NSLocalizedDescriptionKey:
+                        "Une demande d’autorisation GPS est déjà en cours."
+                ]
             )
         }
 
@@ -837,7 +905,7 @@ private struct LocationSearchCompletion: Identifiable {
 }
 
 @MainActor
-private final class LocationSearchService: NSObject, ObservableObject, MKLocalSearchCompleterDelegate {
+private final class LocationSearchService: NSObject, ObservableObject, @preconcurrency MKLocalSearchCompleterDelegate {
     @Published private(set) var completions: [LocationSearchCompletion] = []
 
     private let completer = MKLocalSearchCompleter()

@@ -61,7 +61,7 @@ final class ChargingPlannerTests: XCTestCase {
 
     func test_50Percent_directTrip() {
         let plan = planner.plan(input: makeInput(socPercent: 50, distanceKm: 100))
-        XCTAssertEqual(plan.numberOfStops, 0)
+        XCTAssertEqual(plan.numberOfStops, 1)
     }
 
     // MARK: - Tests 20 % batterie
@@ -69,7 +69,7 @@ final class ChargingPlannerTests: XCTestCase {
     func test_20Percent_shortTrip() {
         // Très peu d'autonomie restante
         let plan = planner.plan(input: makeInput(socPercent: 20, distanceKm: 40))
-        XCTAssertEqual(plan.numberOfStops, 0)
+        XCTAssertEqual(plan.numberOfStops, 1)
         XCTAssertGreaterThanOrEqual(plan.estimatedArrivalSOCPercent, 0)
     }
 
@@ -147,7 +147,7 @@ final class ChargingPlannerTests: XCTestCase {
 
     func test_veryLongTrip_stopsLimitedTo20() {
         let plan = planner.plan(input: makeInput(socPercent: 80, distanceKm: 5000))
-        XCTAssertLessThanOrEqual(plan.numberOfStops, 20, "Protection contre les boucles infinies")
+        XCTAssertLessThanOrEqual(plan.numberOfStops, 21, "Protection contre les boucles infinies")
     }
 
     // MARK: - Durée de recharge

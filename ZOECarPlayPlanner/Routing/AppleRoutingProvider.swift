@@ -16,22 +16,22 @@ struct AppleRoutingProvider: RoutingProvider {
         request.source = MKMapItem(placemark: MKPlacemark(coordinate: origin))
         request.destination = MKMapItem(placemark: MKPlacemark(coordinate: destination))
         request.transportType = .automobile
-
+        
         if preferences.avoidHighways || preferences.avoidTolls {
             request.requestsAlternateRoutes = true
         }
-
+        
         let directions = MKDirections(request: request)
-
+        
         do {
             let response = try await directions.calculate()
             guard let mkRoute = response.routes.first else {
                 throw RoutingError.noRouteFound
             }
-
+            
             let distanceKm = mkRoute.distance / 1000.0
             let durationMin = mkRoute.expectedTravelTime / 60.0
-
+            
             return Route(
                 origin: RoutePoint(
                     name: "Départ",
@@ -57,7 +57,7 @@ struct AppleRoutingProvider: RoutingProvider {
         }
     }
     
-
+    
     func calculateRoute(
         from origin: CLLocationCoordinate2D,
         to destination: CLLocationCoordinate2D
@@ -66,18 +66,18 @@ struct AppleRoutingProvider: RoutingProvider {
         request.source = MKMapItem(placemark: MKPlacemark(coordinate: origin))
         request.destination = MKMapItem(placemark: MKPlacemark(coordinate: destination))
         request.transportType = .automobile
-
+        
         let directions = MKDirections(request: request)
-
+        
         do {
             let response = try await directions.calculate()
             guard let mkRoute = response.routes.first else {
                 throw RoutingError.noRouteFound
             }
-
+            
             let distanceKm = mkRoute.distance / 1000.0
             let durationMin = mkRoute.expectedTravelTime / 60.0
-
+            
             return Route(
                 origin: RoutePoint(
                     name: "Départ",
@@ -101,9 +101,9 @@ struct AppleRoutingProvider: RoutingProvider {
             throw RoutingError.networkError(underlying: error)
         }
     }
-
+    
     // MARK: - Estimation du type de route
-
+    
     /// Estimation simplifiée basée sur la distance et la durée.
     private func roadTypeDistribution(for route: MKRoute) -> RoadTypeDistribution {
         let avgSpeedKmh = (route.distance / 1000.0) / (route.expectedTravelTime / 3600.0)
@@ -115,15 +115,14 @@ struct AppleRoutingProvider: RoutingProvider {
             return RoadTypeDistribution(highwayPercent: 10, roadPercent: 30, cityPercent: 60)
         }
     }
-
-    private extension MKPolyline {
-        var routeCoordinates: [RouteCoordinate] {
-            var coordinates = Array(
-                repeating: CLLocationCoordinate2D(latitude: 0, longitude: 0),
-                count: pointCount
-            )
-            getCoordinates(&coordinates, range: NSRange(location: 0, length: pointCount))
-            return coordinates.map(RouteCoordinate.init)
-        }
+}
+private extension MKPolyline {
+    var routeCoordinates: [RouteCoordinate] {
+        var coordinates = Array(
+            repeating: CLLocationCoordinate2D(latitude: 0, longitude: 0),
+            count: pointCount
+        )
+        getCoordinates(&coordinates, range: NSRange(location: 0, length: pointCount))
+        return coordinates.map(RouteCoordinate.init)
     }
 }

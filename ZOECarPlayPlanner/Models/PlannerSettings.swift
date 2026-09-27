@@ -141,7 +141,7 @@ enum PreferredNavigationApp: String, Codable, CaseIterable, Sendable {
 }
 
 enum DashboardWallpaperStore {
-    private static let fileManager = FileManager.default
+    nonisolated(unsafe) private static let fileManager = FileManager.default
     private static let directoryName = "DashboardWallpaper"
 
     static func saveImageData(_ data: Data) throws -> String {
