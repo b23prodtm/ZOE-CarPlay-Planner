@@ -146,7 +146,8 @@ enum DashboardWallpaperStore {
 
     static func saveImageData(_ data: Data) throws -> String {
         let image = UIImage(data: data)
-        let jpegData = image?.jpegData(compressionQuality: 0.9) ?? data
+        let preparedImage = image?.resizedForDashboard() ?? image
+        let jpegData = preparedImage?.jpegData(compressionQuality: 0.82) ?? data
 
         let directory = try makeDirectoryIfNeeded()
         let filename = "wallpaper.jpg"
@@ -183,5 +184,19 @@ enum DashboardWallpaperStore {
             try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
         }
         return directory
+    }
+}
+
+private extension UIImage {
+    func resizedForDashboard(maxDimension: CGFloat = 1_600) -> UIImage {
+        let longestSide = max(size.width, size.height)
+        guard longestSide > maxDimension else { return self }
+
+        let scale = maxDimension / longestSide
+        let targetSize = CGSize(width: size.width * scale, height: size.height * scale)
+        let renderer = UIGraphicsImageRenderer(size: targetSize)
+        return renderer.image { _ in
+            draw(in: CGRect(origin: .zero, size: targetSize))
+        }
     }
 }

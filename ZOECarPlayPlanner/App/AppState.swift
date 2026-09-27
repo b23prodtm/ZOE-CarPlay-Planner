@@ -394,6 +394,7 @@ final class AppState: ObservableObject {
         availableNavigationApps = allApps.filter { navigationAppIsAvailable($0) }
         if !availableNavigationApps.contains(settings.preferredNavigationApp) {
             settings.preferredNavigationApp = .appleMaps
+            settings.save()
         }
     }
 
@@ -451,26 +452,37 @@ final class AppState: ObservableObject {
             guard let finalDestination = destinationChain.first else { return false }
             let intermediateStops = Array(destinationChain.dropFirst())
             let stopSuffix = intermediateStops.isEmpty ? "" : "+to:" + intermediateStops.joined(separator: "+to:")
-            let urlString = "comgooglemaps://?saddr=\(origin.coordinate.latitude),\(origin.coordinate.longitude)&daddr=\(finalDestination)\(stopSuffix)&directionsmode=driving"
-            guard let url = URL(string: urlString.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "") else {
-                return false
-            }
+            var components = URLComponents()
+            components.scheme = "comgooglemaps"
+            components.queryItems = [
+                URLQueryItem(name: "saddr", value: "\(origin.coordinate.latitude),\(origin.coordinate.longitude)"),
+                URLQueryItem(name: "daddr", value: "\(finalDestination)\(stopSuffix)"),
+                URLQueryItem(name: "directionsmode", value: "driving")
+            ]
+            guard let url = components.url else { return false }
             UIApplication.shared.open(url)
             return true
         case .waze:
             guard points.count <= 2 else { return false }
-            guard let destination = points.last,
-                  let url = URL(string: "waze://?ll=\(destination.coordinate.latitude),\(destination.coordinate.longitude)&navigate=yes") else {
-                return false
-            }
+            guard let destination = points.last else { return false }
+            var components = URLComponents()
+            components.scheme = "waze"
+            components.queryItems = [
+                URLQueryItem(name: "ll", value: "\(destination.coordinate.latitude),\(destination.coordinate.longitude)"),
+                URLQueryItem(name: "navigate", value: "yes")
+            ]
+            guard let url = components.url else { return false }
             UIApplication.shared.open(url)
             return true
         case .roole:
             guard points.count <= 2 else { return false }
-            guard let destination = points.last,
-                  let url = URL(string: "roole://?destination=\(destination.coordinate.latitude),\(destination.coordinate.longitude)") else {
-                return false
-            }
+            guard let destination = points.last else { return false }
+            var components = URLComponents()
+            components.scheme = "roole"
+            components.queryItems = [
+                URLQueryItem(name: "destination", value: "\(destination.coordinate.latitude),\(destination.coordinate.longitude)")
+            ]
+            guard let url = components.url else { return false }
             UIApplication.shared.open(url)
             return true
         }

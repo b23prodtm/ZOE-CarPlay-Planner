@@ -669,6 +669,10 @@ private struct LocationPickerSheet: View {
     }
 
     private func pickCurrentLocation() async {
+        guard !isResolvingSelection else { return }
+        isResolvingSelection = true
+        defer { isResolvingSelection = false }
+
         do {
             let coordinate = try await locationManager.requestCurrentCoordinate()
             onSelect(TripPlace(name: "Ma position actuelle", coordinate: coordinate))
