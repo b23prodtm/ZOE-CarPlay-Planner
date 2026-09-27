@@ -221,7 +221,7 @@ final class MockRoutingTests: XCTestCase {
 
         XCTAssertFalse(stations.isEmpty)
         XCTAssertTrue(stations.allSatisfy { $0.isHighway == true })
-        XCTAssertTrue(stations.allSatisfy { $0.name.contains("Aire autoroute") })
+        XCTAssertTrue(stations.allSatisfy { $0.name.contains("Aire de") })
         XCTAssertTrue(stations.allSatisfy { [.ionity, .electra, .totalEnergies, .fastned].contains($0.network) })
     }
 
@@ -288,9 +288,29 @@ final class MockRoutingTests: XCTestCase {
             networks: ChargingNetwork.allCases
         )
 
-        XCTAssertEqual(stations.count, 2)
-        XCTAssertLessThan(abs(stations[0].coordinate.longitude), 0.05, "La première borne doit rester sur le premier segment du trajet.")
-        XCTAssertGreaterThan(stations[1].coordinate.latitude, 0.95, "La seconde borne doit suivre la fin du parcours, pas la diagonale origine-destination.")
+        XCTAssertGreaterThanOrEqual(stations.count, 4)
+        XCTAssertTrue(stations.contains { abs($0.coordinate.longitude) < 0.05 }, "Au moins une borne doit rester sur le premier segment du trajet.")
+        XCTAssertTrue(stations.contains { $0.coordinate.latitude > 0.95 }, "Au moins une borne doit suivre la fin du parcours, pas la diagonale origine-destination.")
+    }
+
+    func test_stationProvider_generatesAlternativeChoicesNearSameStop() async throws {
+        let provider = MockChargingStationProvider()
+        let route = Route(
+            origin: RoutePoint(name: "Lyon", coordinate: lyon),
+            destination: RoutePoint(name: "Paris", coordinate: paris, distanceFromOriginKm: 400),
+            totalDistanceKm: 400,
+            estimatedDurationMinutes: 260,
+            routePreferences: RoutePreferences(avoidHighways: false)
+        )
+
+        let stations = try await provider.findStations(
+            along: route,
+            connectorTypes: Vehicle.defaultZOE.connectorTypes,
+            networks: ChargingNetwork.allCases
+        )
+
+        let nearbyAlternatives = stations.filter { abs($0.distanceFromRouteKm - 80) <= 10 }
+        XCTAssertGreaterThanOrEqual(nearbyAlternatives.count, 2)
     }
 
     func test_route_originCoordinatePreserved() async throws {

@@ -45,6 +45,8 @@ final class AppState: ObservableObject {
     @Published var lastPlannedTrip: PlannedTrip?
     @Published var availableStationsOnRoute: [ChargingStation] = []
     @Published var availableNavigationApps: [PreferredNavigationApp] = []
+    @Published var currentVehicleLocation: CLLocationCoordinate2D?
+    @Published private(set) var selectedStationIDsByStop: [UUID: UUID] = [:]
 
     // MARK: - Init
 
@@ -86,6 +88,7 @@ final class AppState: ObservableObject {
         settings.useSimulationMode = true
         settings.save()
         isAuthenticated = false
+        currentVehicleLocation = nil
     }
 
     // MARK: - Vehicle
@@ -95,6 +98,7 @@ final class AppState: ObservableObject {
         defer { isLoading = false }
         do {
             vehicleStatus = try await activeVehicleService.getVehicleStatus()
+            currentVehicleLocation = try? await activeVehicleService.getVehicleLocation()
         } catch {
             self.error = AppError.from(error)
         }
@@ -116,6 +120,7 @@ final class AppState: ObservableObject {
         error = nil
         chargingPlan = nil
         availableStationsOnRoute = []
+        selectedStationIDsByStop = [:]
 
         do {
             let effectivePreferences = preferences ?? settings.routePreferences
@@ -229,6 +234,26 @@ final class AppState: ObservableObject {
         await planTrip(origin: trip.origin, destination: trip.destination, waypoints: trip.waypoints, preferences: trip.preferences)
     }
 
+    func refreshRouteFromCurrentVehicleLocation() async {
+        guard let plannedTrip = lastPlannedTrip ?? routeHistory.first else { return }
+
+        do {
+            let latestLocation = try await activeVehicleService.getVehicleLocation()
+            guard let latestLocation else { return }
+            currentVehicleLocation = latestLocation
+
+            let refreshedOrigin = TripPlace(name: "Position actuelle du véhicule", coordinate: latestLocation)
+            await planTrip(
+                origin: refreshedOrigin,
+                destination: plannedTrip.destination,
+                waypoints: plannedTrip.waypoints,
+                preferences: plannedTrip.preferences
+            )
+        } catch {
+            self.error = AppError.from(error)
+        }
+    }
+
     @discardableResult
     func openCurrentTripInPreferredNavigationApp(includeChargingStops: Bool = true) -> Bool {
         guard let route = currentRoute else { return false }
@@ -245,7 +270,7 @@ final class AppState: ObservableObject {
 
         if includeChargingStops, let plan = chargingPlan {
             for stop in plan.stops {
-                guard let station = stop.station else { continue }
+                guard let station = selectedStation(for: stop) else { continue }
                 navigationPoints.append((stop.distanceFromOriginKm, 1, station.name, station.coordinate))
             }
         }
@@ -310,6 +335,38 @@ final class AppState: ObservableObject {
         if isEnabled {
             settings.routePreferences.avoidHighways = false
         }
+    }
+
+    func stationOptions(for stop: ChargingStop) -> [ChargingStation] {
+        let thresholdKm = 18.0
+        let nearbyStations = availableStationsOnRoute
+            .filter { abs($0.distanceFromRouteKm - stop.distanceFromOriginKm) <= thresholdKm }
+            .sorted {
+                let lhsDelta = abs($0.distanceFromRouteKm - stop.distanceFromOriginKm)
+                let rhsDelta = abs($1.distanceFromRouteKm - stop.distanceFromOriginKm)
+                if abs(lhsDelta - rhsDelta) > 0.1 {
+                    return lhsDelta < rhsDelta
+                }
+                return $0.maxPowerKW > $1.maxPowerKW
+            }
+
+        if let station = stop.station,
+           !nearbyStations.contains(where: { $0.id == station.id }) {
+            return [station] + nearbyStations
+        }
+        return nearbyStations
+    }
+
+    func selectedStation(for stop: ChargingStop) -> ChargingStation? {
+        if let selectedStationID = selectedStationIDsByStop[stop.id],
+           let station = availableStationsOnRoute.first(where: { $0.id == selectedStationID }) {
+            return station
+        }
+        return stop.station
+    }
+
+    func selectStation(_ station: ChargingStation, for stop: ChargingStop) {
+        selectedStationIDsByStop[stop.id] = station.id
     }
 
     // MARK: - Private
