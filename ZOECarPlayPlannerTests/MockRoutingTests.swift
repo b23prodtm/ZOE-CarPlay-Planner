@@ -175,6 +175,39 @@ final class MockRoutingTests: XCTestCase {
         XCTAssertEqual(decoded, trip)
     }
 
+
+    func test_stationProvider_prefersHighwayStationsWhenHighwaysAllowed() async throws {
+        let provider = MockChargingStationProvider()
+        let route = Route(
+            origin: RoutePoint(name: "Lyon", coordinate: lyon),
+            destination: RoutePoint(name: "Paris", coordinate: paris, distanceFromOriginKm: 400),
+            totalDistanceKm: 400,
+            estimatedDurationMinutes: 260,
+            routePreferences: RoutePreferences(avoidHighways: false)
+        )
+
+        let stations = try await provider.findStations(along: route, connectorTypes: Vehicle.defaultZOE.connectorTypes)
+
+        XCTAssertFalse(stations.isEmpty)
+        XCTAssertTrue(stations.allSatisfy { $0.isHighway == true })
+    }
+
+    func test_stationProvider_usesNonHighwayStationsWhenAvoidHighways() async throws {
+        let provider = MockChargingStationProvider()
+        let route = Route(
+            origin: RoutePoint(name: "Lyon", coordinate: lyon),
+            destination: RoutePoint(name: "Paris", coordinate: paris, distanceFromOriginKm: 400),
+            totalDistanceKm: 400,
+            estimatedDurationMinutes: 260,
+            routePreferences: RoutePreferences(avoidHighways: true)
+        )
+
+        let stations = try await provider.findStations(along: route, connectorTypes: Vehicle.defaultZOE.connectorTypes)
+
+        XCTAssertFalse(stations.isEmpty)
+        XCTAssertTrue(stations.allSatisfy { $0.isHighway == false })
+    }
+
     func test_route_originCoordinatePreserved() async throws {
         let route = try await provider.calculateRoute(from: lyon, to: geneve)
         XCTAssertEqual(route.origin.coordinate.latitude, lyon.latitude, accuracy: 0.001)

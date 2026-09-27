@@ -12,6 +12,7 @@ struct ChargingStation: Identifiable, Sendable {
     let connectors: [StationConnector]
     var isAvailable: Bool?  // nil = inconnu
     let distanceFromRouteKm: Double
+    let isHighway: Bool?
 
     var maxPowerKW: Double {
         connectors.map { $0.powerKW }.max() ?? 0
@@ -19,6 +20,12 @@ struct ChargingStation: Identifiable, Sendable {
 
     var displayPower: String {
         "\(Int(maxPowerKW)) kW"
+    }
+
+    var locationTypeLabel: String {
+        if isHighway == true { return "Autoroute" }
+        if isHighway == false { return "Hors autoroute" }
+        return "Type inconnu"
     }
 }
 

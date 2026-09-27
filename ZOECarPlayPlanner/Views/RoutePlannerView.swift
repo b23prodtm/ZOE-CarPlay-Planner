@@ -1,5 +1,6 @@
 import SwiftUI
 import CoreLocation
+import MapKit
 
 struct RoutePlannerView: View {
     @EnvironmentObject var appState: AppState
@@ -8,6 +9,11 @@ struct RoutePlannerView: View {
     @State private var selectedDestination: TripPlace = Self.defaultDestination
     @State private var waypoints: [TripPlace] = []
     @State private var pickerContext: LocationPickerContext?
+    @State private var destinationSearchText: String = ""
+    @State private var mapRegion = MKCoordinateRegion(
+        center: CLLocationCoordinate2D(latitude: 46.4, longitude: 4.7),
+        span: MKCoordinateSpan(latitudeDelta: 5.0, longitudeDelta: 5.0)
+    )
 
     private static let defaultOrigin = TripPlace(
         name: "Lyon",
@@ -31,18 +37,97 @@ struct RoutePlannerView: View {
         TripPlace(name: "Turin", coordinate: CLLocationCoordinate2D(latitude: 45.0703, longitude: 7.6869))
     ]
 
+    private var allSuggestions: [TripPlace] {
+        var places: [TripPlace] = []
+        for place in appState.recentPlaces + knownCities {
+            let alreadyExists = places.contains {
+                abs($0.latitude - place.latitude) < 0.0001
+                && abs($0.longitude - place.longitude) < 0.0001
+            }
+            if !alreadyExists {
+                places.append(place)
+            }
+        }
+        return places
+    }
+
+    private var destinationSuggestions: [TripPlace] {
+        let query = destinationSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return [] }
+        return allSuggestions
+            .filter { $0.name.localizedCaseInsensitiveContains(query) }
+            .prefix(6)
+            .map { $0 }
+    }
+
+    private var mapPoints: [PlannerMapPoint] {
+        var points: [PlannerMapPoint] = [
+            PlannerMapPoint(
+                id: "origin",
+                title: "Départ",
+                subtitle: selectedOrigin.name,
+                coordinate: selectedOrigin.coordinate,
+                tint: .blue,
+                symbol: "play.circle.fill"
+            ),
+            PlannerMapPoint(
+                id: "destination",
+                title: "Destination",
+                subtitle: selectedDestination.name,
+                coordinate: selectedDestination.coordinate,
+                tint: .red,
+                symbol: "flag.circle.fill"
+            )
+        ]
+
+        for (index, waypoint) in waypoints.enumerated() {
+            points.append(
+                PlannerMapPoint(
+                    id: "waypoint-\(waypoint.id.uuidString)",
+                    title: "Étape \(index + 1)",
+                    subtitle: waypoint.name,
+                    coordinate: waypoint.coordinate,
+                    tint: .purple,
+                    symbol: "point.topleft.down.curvedto.point.bottomright.up"
+                )
+            )
+        }
+
+        for station in appState.availableStationsOnRoute {
+            points.append(
+                PlannerMapPoint(
+                    id: "station-\(station.id.uuidString)",
+                    title: station.name,
+                    subtitle: station.locationTypeLabel,
+                    coordinate: station.coordinate,
+                    tint: station.isHighway == true ? .green : .orange,
+                    symbol: station.isHighway == true ? "road.lanes" : "bolt.fill"
+                )
+            )
+        }
+
+        return points
+    }
+
+    private var mapPointsSignature: String {
+        mapPoints
+            .map { "\($0.id)-\(Int($0.coordinate.latitude * 10000))-\(Int($0.coordinate.longitude * 10000))" }
+            .joined(separator: "|")
+    }
+
     var body: some View {
         NavigationStack {
             Form {
                 routeSection
+                destinationSearchSection
                 preferenceSection
                 calculateSection
                 loadingSection
+                detailedMapSection
                 resultSection
                 historySection
             }
             .navigationTitle("Planifier un trajet")
-            .toolbar { EditButton() }
             .sheet(item: $pickerContext) { context in
                 LocationPickerSheet(
                     title: context.target.title,
@@ -52,6 +137,10 @@ struct RoutePlannerView: View {
                         applySelection(place, for: context.target)
                     }
                 )
+            }
+            .onAppear(perform: updateMapRegion)
+            .onChange(of: mapPointsSignature) { _, _ in
+                updateMapRegion()
             }
         }
     }
@@ -120,6 +209,27 @@ struct RoutePlannerView: View {
     }
 
     @ViewBuilder
+    private var destinationSearchSection: some View {
+        Section("Recherche d'arrivée") {
+            TextField("Rechercher un lieu d'arrivée", text: $destinationSearchText)
+                .textInputAutocapitalization(.words)
+                .autocorrectionDisabled()
+
+            if !destinationSuggestions.isEmpty {
+                ForEach(destinationSuggestions) { place in
+                    Button {
+                        selectedDestination = place
+                        destinationSearchText = ""
+                    } label: {
+                        Label(place.name, systemImage: "magnifyingglass")
+                    }
+                    .foregroundStyle(.primary)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
     private var preferenceSection: some View {
         Section("Mode et préférences") {
             Picker("Mode", selection: $appState.settings.routePreferences.mode) {
@@ -174,6 +284,45 @@ struct RoutePlannerView: View {
                     Text("Calcul en cours…")
                         .foregroundStyle(.secondary)
                         .padding(.leading, 8)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var detailedMapSection: some View {
+        Section("Plan détaillé") {
+            Map(coordinateRegion: $mapRegion, annotationItems: mapPoints) { point in
+                MapAnnotation(coordinate: point.coordinate) {
+                    VStack(spacing: 2) {
+                        Image(systemName: point.symbol)
+                            .font(.caption)
+                            .padding(6)
+                            .background(point.tint.opacity(0.15))
+                            .foregroundStyle(point.tint)
+                            .clipShape(Circle())
+                        Text(point.title)
+                            .font(.caption2)
+                            .lineLimit(1)
+                    }
+                }
+            }
+            .frame(height: 280)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+
+            if !appState.availableStationsOnRoute.isEmpty {
+                Text("Bornes visibles sur la carte : \(appState.availableStationsOnRoute.count)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                ForEach(Array(appState.availableStationsOnRoute.prefix(4))) { station in
+                    HStack {
+                        Label(station.name, systemImage: station.isHighway == true ? "road.lanes" : "bolt.fill")
+                        Spacer()
+                        Text(station.locationTypeLabel)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
         }
@@ -269,6 +418,31 @@ struct RoutePlannerView: View {
             waypoints[index] = place
         }
     }
+
+    private func updateMapRegion() {
+        guard !mapPoints.isEmpty else { return }
+
+        let latitudes = mapPoints.map { $0.coordinate.latitude }
+        let longitudes = mapPoints.map { $0.coordinate.longitude }
+
+        guard let minLat = latitudes.min(),
+              let maxLat = latitudes.max(),
+              let minLon = longitudes.min(),
+              let maxLon = longitudes.max()
+        else { return }
+
+        let center = CLLocationCoordinate2D(
+            latitude: (minLat + maxLat) / 2,
+            longitude: (minLon + maxLon) / 2
+        )
+
+        let span = MKCoordinateSpan(
+            latitudeDelta: max(0.25, (maxLat - minLat) * 1.6),
+            longitudeDelta: max(0.25, (maxLon - minLon) * 1.6)
+        )
+
+        mapRegion = MKCoordinateRegion(center: center, span: span)
+    }
 }
 
 private struct LocationPickerContext: Identifiable {
@@ -294,6 +468,15 @@ private enum LocationPickerTarget {
             return "Modifier une étape"
         }
     }
+}
+
+private struct PlannerMapPoint: Identifiable {
+    let id: String
+    let title: String
+    let subtitle: String
+    let coordinate: CLLocationCoordinate2D
+    let tint: Color
+    let symbol: String
 }
 
 private struct LocationPickerSheet: View {

@@ -54,9 +54,10 @@ final class CarPlayCoordinator {
             items.append(CPListItem(text: "Recharge", detailText: "Aucune recharge nécessaire"))
         } else {
             for (index, stop) in plan.stops.enumerated() {
+                let locationType = stop.station?.locationTypeLabel ?? "Type inconnu"
                 let item = CPListItem(
                     text: "Recharge \(index + 1) — dans \(Int(stop.distanceFromOriginKm)) km",
-                    detailText: "\(stop.displayArrivalSOC) → \(stop.displayTargetSOC) · \(stop.displayDuration)"
+                    detailText: "\(stop.displayArrivalSOC) → \(stop.displayTargetSOC) · \(stop.displayDuration) · \(locationType)"
                 )
                 items.append(item)
             }

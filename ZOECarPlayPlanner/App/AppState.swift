@@ -42,6 +42,7 @@ final class AppState: ObservableObject {
     @Published var routeHistory: [PlannedTrip] = []
     @Published var recentPlaces: [TripPlace] = []
     @Published var lastPlannedTrip: PlannedTrip?
+    @Published var availableStationsOnRoute: [ChargingStation] = []
 
     // MARK: - Init
 
@@ -111,6 +112,7 @@ final class AppState: ObservableObject {
         defer { isLoading = false }
         error = nil
         chargingPlan = nil
+        availableStationsOnRoute = []
 
         do {
             let effectivePreferences = preferences ?? settings.routePreferences
@@ -181,6 +183,7 @@ final class AppState: ObservableObject {
                 along: route,
                 connectorTypes: settings.vehicle.connectorTypes
             )
+            availableStationsOnRoute = stations
 
             guard let status = vehicleStatus else { return }
             let input = ChargingPlannerInput(

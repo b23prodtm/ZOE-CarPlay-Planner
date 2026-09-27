@@ -3,6 +3,8 @@ import SwiftUI
 struct DashboardView: View {
     @EnvironmentObject var appState: AppState
 
+    private let vehicleImageURL = URL(string: "https://github.com/user-attachments/assets/58f6de8e-fb5b-4ac6-ba9a-50145d062c38")
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 32) {
@@ -10,6 +12,10 @@ struct DashboardView: View {
                 Text("ZOE CarPlay Planner")
                     .font(.largeTitle.bold())
                     .foregroundStyle(.primary)
+
+                // Véhicule
+
+                vehicleImageSection
 
                 // État batterie
                 if let status = appState.vehicleStatus {
@@ -86,5 +92,29 @@ struct DashboardButton: View {
         .background(color.opacity(0.15))
         .foregroundStyle(color)
         .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+}
+
+
+private extension DashboardView {
+    @ViewBuilder
+    var vehicleImageSection: some View {
+        if let vehicleImageURL {
+            AsyncImage(url: vehicleImageURL) { image in
+                image
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxWidth: 320)
+            } placeholder: {
+                ProgressView()
+                    .frame(height: 120)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+            )
+            .accessibilityLabel("Image du véhicule ZOE")
+        }
     }
 }
