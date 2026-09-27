@@ -1,4 +1,5 @@
 import SwiftUI
+import PhotosUI
 
 struct SettingsView: View {
     @EnvironmentObject var appState: AppState
@@ -10,6 +11,8 @@ struct SettingsView: View {
     @State private var vinInput: String = ""
     @State private var showPassword: Bool = false
     @State private var isConnecting: Bool = false
+    @State private var selectedWallpaperItem: PhotosPickerItem?
+    @State private var wallpaperError: AppError?
 
     var body: some View {
         NavigationStack {
@@ -18,10 +21,32 @@ struct SettingsView: View {
                 simulationSection
                 consumptionSection
                 chargingStrategySection
+                routePreferencesSection
+                chargingFilterSection
+                navigationSection
+                wallpaperSection
                 vehicleSection
                 saveSection
             }
             .navigationTitle("Réglages")
+            .alert("Impossible de mettre à jour le fond d’écran", isPresented: Binding(
+                get: { wallpaperError != nil },
+                set: { if !$0 { wallpaperError = nil } }
+            )) {
+                Button("OK") { wallpaperError = nil }
+            } message: {
+                Text(wallpaperError?.message ?? "")
+            }
+            .onChange(of: selectedWallpaperItem) { _, newValue in
+                guard let newValue else { return }
+                Task { await persistWallpaper(from: newValue) }
+            }
+            .onChange(of: appState.settings.preferredNavigationApp) { _, _ in
+                appState.settings.save()
+            }
+            .onAppear {
+                appState.refreshAvailableNavigationApps()
+            }
         }
     }
 
@@ -82,7 +107,43 @@ struct SettingsView: View {
                       range: 0...20, tint: .blue)
         }
     }
+    
+    @ViewBuilder private var routePreferencesSection: some View {
+        Section("Préférences de trajet") {
+            Picker("Mode", selection: $appState.settings.routePreferences.mode) {
+                ForEach(TravelMode.allCases, id: \.self) { mode in
+                    Text(mode.label).tag(mode)
+                }
+            }
+            .pickerStyle(.segmented)
+            .accessibilityHint("Le mode Éco réduit la consommation et peut rallonger le trajet.")
 
+            Toggle(
+                "Éviter les autoroutes",
+                isOn: Binding(
+                    get: { appState.settings.routePreferences.avoidHighways },
+                    set: { appState.setAvoidHighways($0) }
+                )
+            )
+            .tint(.orange)
+
+            Toggle("Éviter les péages", isOn: $appState.settings.routePreferences.avoidTolls)
+                .tint(.orange)
+
+            Toggle(
+                "Préférer les autoroutes",
+                isOn: Binding(
+                    get: { appState.settings.routePreferences.preferHighways },
+                    set: { appState.setPreferHighways($0) }
+                )
+            )
+            .tint(.green)
+
+            Toggle("Préférer les routes pittoresques", isOn: $appState.settings.routePreferences.preferScenic)
+                .tint(.purple)
+        }
+    }
+    
     @ViewBuilder private var vehicleSection: some View {
         Section("Véhicule") {
             HStack {
@@ -97,6 +158,56 @@ struct SettingsView: View {
                 Text(String(format: "%.0f kWh", appState.settings.vehicle.usableBatteryKWh))
                     .foregroundStyle(.secondary)
             }
+        }
+    }
+
+    @ViewBuilder private var chargingFilterSection: some View {
+        Section("Filtres de recharge par défaut") {
+            ForEach(ChargingNetwork.allCases, id: \.self) { network in
+                Toggle(network.displayName, isOn: networkBinding(for: network))
+                    .tint(.green)
+            }
+
+            ForEach(ConnectorType.allCases, id: \.self) { connector in
+                Toggle(connector.displayName, isOn: connectorBinding(for: connector))
+                    .tint(.blue)
+            }
+        }
+    }
+
+    @ViewBuilder private var navigationSection: some View {
+        Section("Navigation externe") {
+            Picker("Application préférée", selection: $appState.settings.preferredNavigationApp) {
+                ForEach(availableNavigationChoices, id: \.self) { app in
+                    Text(app.displayName).tag(app)
+                }
+            }
+
+            Text("L’application choisie sera utilisée si elle est installée, sinon l’app basculera automatiquement sur Apple Plans.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    @ViewBuilder private var wallpaperSection: some View {
+        Section("Fond d’écran d’accueil") {
+            PhotosPicker(selection: $selectedWallpaperItem, matching: .images) {
+                Label("Choisir une image", systemImage: "photo.on.rectangle")
+            }
+
+            if appState.settings.dashboardWallpaperFilename != nil {
+                Button(role: .destructive) {
+                    DashboardWallpaperStore.deleteImage(named: appState.settings.dashboardWallpaperFilename)
+                    appState.settings.dashboardWallpaperFilename = nil
+                    appState.settings.save()
+                } label: {
+                    Label("Supprimer le fond personnalisé", systemImage: "trash")
+                }
+            }
+
+            Text("L’image est stockée localement sur l’iPhone. Si aucune image n’est choisie, le visuel par défaut est utilisé.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
     }
 
@@ -211,6 +322,48 @@ struct SettingsView: View {
         if appState.isAuthenticated {
             passwordInput = ""   // Effacer le mot de passe de la mémoire vive
         }
+    }
+
+    private func persistWallpaper(from item: PhotosPickerItem) async {
+        do {
+            guard let data = try await item.loadTransferable(type: Data.self) else {
+                throw CocoaError(.fileReadUnknown)
+            }
+
+            let previousFilename = appState.settings.dashboardWallpaperFilename
+            let filename = try DashboardWallpaperStore.saveImageData(data)
+            appState.settings.dashboardWallpaperFilename = filename
+            if previousFilename != filename {
+                DashboardWallpaperStore.deleteImage(named: previousFilename)
+            }
+            appState.settings.save()
+            selectedWallpaperItem = nil
+        } catch {
+            wallpaperError = AppError.from(error)
+        }
+    }
+
+    private var availableNavigationChoices: [PreferredNavigationApp] {
+        let apps = appState.availableNavigationApps
+        return apps.isEmpty ? [.appleMaps] : apps
+    }
+
+    private func networkBinding(for network: ChargingNetwork) -> Binding<Bool> {
+        Binding(
+            get: { appState.settings.selectedChargingNetworks.contains(network) },
+            set: { isEnabled in
+                appState.settings.setChargingNetwork(network, isEnabled: isEnabled)
+            }
+        )
+    }
+
+    private func connectorBinding(for connector: ConnectorType) -> Binding<Bool> {
+        Binding(
+            get: { appState.settings.selectedConnectorTypes.contains(connector) },
+            set: { isEnabled in
+                appState.settings.setConnectorType(connector, isEnabled: isEnabled)
+            }
+        )
     }
 
     // MARK: - Helpers

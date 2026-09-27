@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ChargingPlanView: View {
     @EnvironmentObject var appState: AppState
+    @State private var showNavigationError = false
 
     var body: some View {
         NavigationStack {
@@ -20,6 +21,11 @@ struct ChargingPlanView: View {
                 }
             }
             .navigationTitle("Plan de recharge")
+            .alert("Navigation indisponible", isPresented: $showNavigationError) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text("Impossible d'ouvrir Plans et la navigation CarPlay pour ce trajet.")
+            }
         }
     }
 
@@ -34,6 +40,15 @@ struct ChargingPlanView: View {
                 if plan.totalExtraTimeMinutes > 0 {
                     LabeledContent("Temps de recharge estimé", value: "≈ \(Int(plan.totalExtraTimeMinutes)) min")
                 }
+
+                Button {
+                    if !appState.openCurrentTripInPreferredNavigationApp(includeChargingStops: true) {
+                        showNavigationError = true
+                    }
+                } label: {
+                    Label("Ouvrir dans \(appState.settings.preferredNavigationApp.displayName)", systemImage: "map.fill")
+                }
+                .foregroundStyle(.blue)
             }
 
             if plan.stops.isEmpty {
