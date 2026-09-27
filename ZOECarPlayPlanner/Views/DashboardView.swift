@@ -145,52 +145,6 @@ struct DashboardView: View {
                 Text(appState.error?.message ?? "")
             }
         }
-
-        @ViewBuilder
-        var manualSOCControl: some View {
-            if appState.settings.manualSOCSliderLayout == .vertical {
-                HStack(alignment: .center, spacing: 16) {
-                    VerticalSOCSlider(value: Binding(
-                        get: { appState.settings.simulatedSOCPercent },
-                        set: { newValue in
-                            appState.settings.simulatedSOCPercent = newValue
-                            Task { await appState.updateManualSOC(newValue) }
-                        }
-                    ))
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("SOC manuel")
-                            .font(.headline)
-                            .foregroundStyle(.white)
-                        Text("\(Int(appState.settings.simulatedSOCPercent)) %")
-                            .font(.title3.weight(.semibold))
-                            .foregroundStyle(.white)
-                    }
-                    Spacer()
-                }
-                .padding()
-                .frame(maxWidth: .infinity, minHeight: 160)
-                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 18))
-            } else {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text("SOC manuel")
-                        Spacer()
-                        Text("\(Int(appState.settings.simulatedSOCPercent)) %")
-                    }
-                    .foregroundStyle(.white)
-                    Slider(value: Binding(
-                        get: { appState.settings.simulatedSOCPercent },
-                        set: { newValue in
-                            appState.settings.simulatedSOCPercent = newValue
-                            Task { await appState.updateManualSOC(newValue) }
-                        }
-                    ), in: 0...100, step: 1)
-                    .tint(.green)
-                }
-                .padding()
-                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 18))
-            }
-        }
     }
 }
 
@@ -343,6 +297,52 @@ private extension DashboardView {
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
                 .background(.black.opacity(0.35), in: Capsule())
+        }
+    }
+
+    @ViewBuilder
+    var manualSOCControl: some View {
+        if appState.settings.manualSOCSliderLayout == .vertical {
+            HStack(alignment: .center, spacing: 16) {
+                VerticalSOCSlider(value: Binding(
+                    get: { appState.settings.simulatedSOCPercent },
+                    set: { newValue in
+                        appState.settings.simulatedSOCPercent = newValue
+                        Task { await appState.updateManualSOC(newValue) }
+                    }
+                ))
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("SOC manuel")
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                    Text("\(Int(appState.settings.simulatedSOCPercent)) %")
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(.white)
+                }
+                Spacer()
+            }
+            .padding()
+            .frame(maxWidth: .infinity, minHeight: 160)
+            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 18))
+        } else {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text("SOC manuel")
+                    Spacer()
+                    Text("\(Int(appState.settings.simulatedSOCPercent)) %")
+                }
+                .foregroundStyle(.white)
+                Slider(value: Binding(
+                    get: { appState.settings.simulatedSOCPercent },
+                    set: { newValue in
+                        appState.settings.simulatedSOCPercent = newValue
+                        Task { await appState.updateManualSOC(newValue) }
+                    }
+                ), in: 0...100, step: 1)
+                .tint(.green)
+            }
+            .padding()
+            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 18))
         }
     }
 
