@@ -267,6 +267,32 @@ final class MockRoutingTests: XCTestCase {
         XCTAssertTrue(stations.allSatisfy { [.electra, .totalEnergies, .allego, .local].contains($0.network) })
     }
 
+    func test_stationProvider_placesStationsAlongRoutePath() async throws {
+        let provider = MockChargingStationProvider()
+        let route = Route(
+            origin: RoutePoint(name: "A", coordinate: CLLocationCoordinate2D(latitude: 0, longitude: 0)),
+            destination: RoutePoint(name: "C", coordinate: CLLocationCoordinate2D(latitude: 1, longitude: 1), distanceFromOriginKm: 240),
+            totalDistanceKm: 240,
+            estimatedDurationMinutes: 180,
+            routePreferences: RoutePreferences(avoidHighways: false),
+            path: [
+                RouteCoordinate(latitude: 0, longitude: 0),
+                RouteCoordinate(latitude: 1, longitude: 0),
+                RouteCoordinate(latitude: 1, longitude: 1)
+            ]
+        )
+
+        let stations = try await provider.findStations(
+            along: route,
+            connectorTypes: Vehicle.defaultZOE.connectorTypes,
+            networks: ChargingNetwork.allCases
+        )
+
+        XCTAssertEqual(stations.count, 2)
+        XCTAssertLessThan(abs(stations[0].coordinate.longitude), 0.05, "La première borne doit rester sur le premier segment du trajet.")
+        XCTAssertGreaterThan(stations[1].coordinate.latitude, 0.95, "La seconde borne doit suivre la fin du parcours, pas la diagonale origine-destination.")
+    }
+
     func test_route_originCoordinatePreserved() async throws {
         let route = try await provider.calculateRoute(from: lyon, to: geneve)
         XCTAssertEqual(route.origin.coordinate.latitude, lyon.latitude, accuracy: 0.001)

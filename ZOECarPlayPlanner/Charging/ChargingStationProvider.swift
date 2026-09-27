@@ -25,6 +25,7 @@ struct MockChargingStationProvider: ChargingStationProvider {
         // Si l'utilisateur n'évite pas les autoroutes, privilégier des aires d'autoroute.
         var stations: [ChargingStation] = []
         let totalKm = route.totalDistanceKm
+        let routeCoordinates = sampledRouteCoordinates(for: route)
         var distanceMark = 80.0
         var generatedIndex = 0
         let preferHighwayNetwork = !route.routePreferences.avoidHighways
@@ -34,10 +35,7 @@ struct MockChargingStationProvider: ChargingStationProvider {
 
         while distanceMark < totalKm {
             let fraction = distanceMark / totalKm
-            let lat = route.origin.coordinate.latitude
-                    + fraction * (route.destination.coordinate.latitude - route.origin.coordinate.latitude)
-            let lon = route.origin.coordinate.longitude
-                    + fraction * (route.destination.coordinate.longitude - route.origin.coordinate.longitude)
+            let coordinate = coordinate(at: fraction, along: routeCoordinates)
 
             let network = availableNetworks[generatedIndex % availableNetworks.count]
             let stationName = preferHighwayNetwork
@@ -47,7 +45,7 @@ struct MockChargingStationProvider: ChargingStationProvider {
             let station = ChargingStation(
                 id: UUID(),
                 name: stationName,
-                coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lon),
+                coordinate: coordinate,
                 network: network,
                 connectors: [
                     StationConnector(id: UUID(), type: .type2AC, powerKW: 22, isAvailable: true),
@@ -66,5 +64,56 @@ struct MockChargingStationProvider: ChargingStationProvider {
             distanceMark += 80
         }
         return stations
+    }
+
+    private func sampledRouteCoordinates(for route: Route) -> [CLLocationCoordinate2D] {
+        let pathCoordinates = route.path.map(\.coordinate)
+        if pathCoordinates.count >= 2 {
+            return pathCoordinates
+        }
+        return [route.origin.coordinate, route.destination.coordinate]
+    }
+
+    private func coordinate(
+        at fraction: Double,
+        along routeCoordinates: [CLLocationCoordinate2D]
+    ) -> CLLocationCoordinate2D {
+        guard routeCoordinates.count >= 2 else {
+            return routeCoordinates.first ?? .init(latitude: 0, longitude: 0)
+        }
+
+        let clLocations = routeCoordinates.map { CLLocation(latitude: $0.latitude, longitude: $0.longitude) }
+        let segmentLengths = zip(clLocations, clLocations.dropFirst()).map { $0.distance(from: $1) }
+        let totalLength = segmentLengths.reduce(0, +)
+        guard totalLength > 0 else { return routeCoordinates.last! }
+
+        let targetLength = totalLength * min(max(fraction, 0), 1)
+        var traveledLength = 0.0
+
+        for (index, segmentLength) in segmentLengths.enumerated() {
+            let nextLength = traveledLength + segmentLength
+            if targetLength <= nextLength {
+                let segmentFraction = segmentLength == 0 ? 0 : (targetLength - traveledLength) / segmentLength
+                return interpolatedCoordinate(
+                    from: routeCoordinates[index],
+                    to: routeCoordinates[index + 1],
+                    fraction: segmentFraction
+                )
+            }
+            traveledLength = nextLength
+        }
+
+        return routeCoordinates.last!
+    }
+
+    private func interpolatedCoordinate(
+        from start: CLLocationCoordinate2D,
+        to end: CLLocationCoordinate2D,
+        fraction: Double
+    ) -> CLLocationCoordinate2D {
+        CLLocationCoordinate2D(
+            latitude: start.latitude + (end.latitude - start.latitude) * fraction,
+            longitude: start.longitude + (end.longitude - start.longitude) * fraction
+        )
     }
 }
