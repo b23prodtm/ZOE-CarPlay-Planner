@@ -45,6 +45,9 @@ final class AppState: ObservableObject {
     @Published var lastPlannedTrip: PlannedTrip?
     @Published var availableStationsOnRoute: [ChargingStation] = []
     @Published var availableNavigationApps: [PreferredNavigationApp] = []
+    @Published var currentVehicleLocation: CLLocationCoordinate2D?
+    @Published private(set) var selectedStationIDsByStop: [UUID: UUID] = [:]
+    @Published var chargingStationSelectionPreference: ChargingStationSelectionPreference = .balanced
 
     // MARK: - Init
 
@@ -86,6 +89,9 @@ final class AppState: ObservableObject {
         settings.useSimulationMode = true
         settings.save()
         isAuthenticated = false
+        currentVehicleLocation = nil
+        await applyManualSOC()
+        await refreshVehicleStatus()
     }
 
     // MARK: - Vehicle
@@ -93,8 +99,18 @@ final class AppState: ObservableObject {
     func refreshVehicleStatus() async {
         isLoading = true
         defer { isLoading = false }
+        if !settings.useSimulationMode && realService == nil {
+            vehicleStatus = nil
+            currentVehicleLocation = nil
+            isAuthenticated = false
+            return
+        }
         do {
+            if settings.useSimulationMode {
+                await applyManualSOC()
+            }
             vehicleStatus = try await activeVehicleService.getVehicleStatus()
+            currentVehicleLocation = try? await activeVehicleService.getVehicleLocation()
         } catch {
             self.error = AppError.from(error)
         }
@@ -116,6 +132,8 @@ final class AppState: ObservableObject {
         error = nil
         chargingPlan = nil
         availableStationsOnRoute = []
+        selectedStationIDsByStop = [:]
+        chargingStationSelectionPreference = .balanced
 
         do {
             let effectivePreferences = preferences ?? settings.routePreferences
@@ -200,25 +218,8 @@ final class AppState: ObservableObject {
             lastPlannedTrip = trip
             addToHistory(trip)
 
-            guard let status = vehicleStatus else { return }
-            let input = ChargingPlannerInput(
-                currentSOCPercent: status.battery.stateOfChargePercent,
-                usableBatteryKWh: settings.vehicle.usableBatteryKWh,
-                consumptionWhPerKm: effectiveConsumptionWhPerKm(
-                    baseConsumption: settings.consumptionWhPerKm,
-                    mode: effectivePreferences.mode
-                ),
-                distanceKm: route.totalDistanceKm,
-                strategy: ChargingStrategy(
-                    minimumSOCPercent: settings.minBatteryAtArrivalPercent,
-                    targetSOCPercent: settings.maxBatteryAfterChargePercent,
-                    safetyMarginPercent: settings.safetyMarginPercent
-                ),
-                chargingPowerKW: settings.preferredChargingPowerKW,
-                availableStations: stations,
-                roadTypes: route.roadType
-            )
-            chargingPlan = chargingPlanner.plan(input: input)
+            rebuildChargingPlan()
+            validateChargingPlanAlignment()
         } catch {
             self.error = AppError.from(error)
         }
@@ -227,6 +228,26 @@ final class AppState: ObservableObject {
     func relaunchTripFromHistory(_ trip: PlannedTrip) async {
         settings.routePreferences = trip.preferences
         await planTrip(origin: trip.origin, destination: trip.destination, waypoints: trip.waypoints, preferences: trip.preferences)
+    }
+
+    func refreshRouteFromCurrentVehicleLocation() async {
+        guard let plannedTrip = lastPlannedTrip ?? routeHistory.first else { return }
+
+        do {
+            let latestLocation = try await activeVehicleService.getVehicleLocation()
+            guard let latestLocation else { return }
+            currentVehicleLocation = latestLocation
+
+            let refreshedOrigin = TripPlace(name: "Position actuelle du véhicule", coordinate: latestLocation)
+            await planTrip(
+                origin: refreshedOrigin,
+                destination: plannedTrip.destination,
+                waypoints: plannedTrip.waypoints,
+                preferences: plannedTrip.preferences
+            )
+        } catch {
+            self.error = AppError.from(error)
+        }
     }
 
     @discardableResult
@@ -245,7 +266,7 @@ final class AppState: ObservableObject {
 
         if includeChargingStops, let plan = chargingPlan {
             for stop in plan.stops {
-                guard let station = stop.station else { continue }
+                guard let station = selectedStation(for: stop) else { continue }
                 navigationPoints.append((stop.distanceFromOriginKm, 1, station.name, station.coordinate))
             }
         }
@@ -312,6 +333,84 @@ final class AppState: ObservableObject {
         }
     }
 
+    func stationOptions(for stop: ChargingStop) -> [ChargingStation] {
+        let thresholdKm = 18.0
+        let nearbyStations = availableStationsOnRoute
+            .filter { abs($0.distanceFromRouteKm - stop.distanceFromOriginKm) <= thresholdKm }
+            .sorted {
+                let lhsDelta = abs($0.distanceFromRouteKm - stop.distanceFromOriginKm)
+                let rhsDelta = abs($1.distanceFromRouteKm - stop.distanceFromOriginKm)
+                switch chargingStationSelectionPreference {
+                case .earlier:
+                    let lhsEarlier = $0.distanceFromRouteKm <= stop.distanceFromOriginKm
+                    let rhsEarlier = $1.distanceFromRouteKm <= stop.distanceFromOriginKm
+                    if lhsEarlier != rhsEarlier { return lhsEarlier }
+                case .later:
+                    let lhsLater = $0.distanceFromRouteKm >= stop.distanceFromOriginKm
+                    let rhsLater = $1.distanceFromRouteKm >= stop.distanceFromOriginKm
+                    if lhsLater != rhsLater { return lhsLater }
+                case .balanced:
+                    break
+                }
+                if abs(lhsDelta - rhsDelta) > 0.1 {
+                    return lhsDelta < rhsDelta
+                }
+                if settings.preferHighwayStations,
+                   currentRoute?.routePreferences.avoidHighways != true,
+                   $0.isHighway != $1.isHighway {
+                    return $0.isHighway == true
+                }
+                return $0.maxPowerKW > $1.maxPowerKW
+            }
+
+        if let station = stop.station,
+           !nearbyStations.contains(where: { $0.id == station.id }) {
+            return [station] + nearbyStations
+        }
+        return nearbyStations
+    }
+
+    func selectedStation(for stop: ChargingStop) -> ChargingStation? {
+        if let selectedStationID = selectedStationIDsByStop[stop.id],
+           let station = availableStationsOnRoute.first(where: { $0.id == selectedStationID }) {
+            return station
+        }
+        return stop.station
+    }
+
+    func selectStation(_ station: ChargingStation, for stop: ChargingStop) {
+        selectedStationIDsByStop[stop.id] = station.id
+    }
+
+    func setManualModeEnabled(_ isManualMode: Bool) async {
+        settings.useSimulationMode = isManualMode
+        settings.save()
+        if isManualMode {
+            await applyManualSOC()
+        } else if realService == nil {
+            vehicleStatus = nil
+            currentVehicleLocation = nil
+        }
+        await refreshVehicleStatus()
+    }
+
+    func updateManualSOC(_ soc: Double) async {
+        settings.simulatedSOCPercent = min(100, max(0, soc))
+        settings.save()
+        guard settings.useSimulationMode else { return }
+        await applyManualSOC()
+        await refreshVehicleStatus()
+    }
+
+    func recalculateChargingStops(
+        preference: ChargingStationSelectionPreference
+    ) {
+        chargingStationSelectionPreference = preference
+        selectedStationIDsByStop = [:]
+        rebuildChargingPlan()
+        validateChargingPlanAlignment()
+    }
+
     // MARK: - Private
 
     nonisolated static func cumulativeDistances(for segmentDistances: [Double]) -> [Double] {
@@ -329,6 +428,107 @@ final class AppState: ObservableObject {
         case .eco:
             return baseConsumption * 0.9
         }
+    }
+
+    private func rebuildChargingPlan() {
+        guard let status = vehicleStatus, let route = currentRoute else { return }
+
+        let input = ChargingPlannerInput(
+            currentSOCPercent: status.battery.stateOfChargePercent,
+            usableBatteryKWh: settings.vehicle.usableBatteryKWh,
+            consumptionWhPerKm: effectiveConsumptionWhPerKm(
+                baseConsumption: settings.consumptionWhPerKm,
+                mode: route.routePreferences.mode
+            ),
+            distanceKm: route.totalDistanceKm,
+            strategy: ChargingStrategy(
+                minimumSOCPercent: settings.minBatteryAtArrivalPercent,
+                targetSOCPercent: settings.maxBatteryAfterChargePercent,
+                safetyMarginPercent: settings.safetyMarginPercent
+            ),
+            chargingPowerKW: settings.preferredChargingPowerKW,
+            availableStations: availableStationsOnRoute,
+            roadTypes: route.roadType,
+            preferHighwayStations: settings.preferHighwayStations && !route.routePreferences.avoidHighways,
+            stationSelectionPreference: chargingStationSelectionPreference
+        )
+        chargingPlan = chargingPlanner.plan(input: input)
+    }
+
+    private func validateChargingPlanAlignment() {
+        guard let route = currentRoute, let plan = chargingPlan else { return }
+
+        let routeCoordinates = route.path.map(\.coordinate).isEmpty
+            ? [route.origin.coordinate, route.destination.coordinate]
+            : route.path.map(\.coordinate)
+
+        let maximumRouteDeviationMeters = 1_000.0
+        let maximumProgressDeviationKm = 20.0
+
+        let hasInvalidStop = plan.stops.contains { stop in
+            guard let station = selectedStation(for: stop) else { return false }
+            let routeDeviationMeters = shortestDistanceMeters(
+                from: station.coordinate,
+                to: routeCoordinates
+            )
+            let progressDeviationKm = abs(station.distanceFromRouteKm - stop.distanceFromOriginKm)
+            return routeDeviationMeters > maximumRouteDeviationMeters
+                || progressDeviationKm > maximumProgressDeviationKm
+        }
+
+        if hasInvalidStop {
+            chargingPlan = nil
+            error = AppError(
+                message: "Certaines bornes proposées sont trop éloignées du parcours prévu. Essayez le mode Éco, désactivez la préférence pour les aires d’autoroute, ou relancez le calcul."
+            )
+        }
+    }
+
+    private func shortestDistanceMeters(
+        from coordinate: CLLocationCoordinate2D,
+        to routeCoordinates: [CLLocationCoordinate2D]
+    ) -> Double {
+        guard routeCoordinates.count >= 2 else { return 0 }
+
+        return zip(routeCoordinates, routeCoordinates.dropFirst())
+            .map { distanceToSegmentMeters(point: coordinate, start: $0.0, end: $0.1) }
+            .min() ?? 0
+    }
+
+    private func distanceToSegmentMeters(
+        point: CLLocationCoordinate2D,
+        start: CLLocationCoordinate2D,
+        end: CLLocationCoordinate2D
+    ) -> Double {
+        let meanLatitudeRadians = ((start.latitude + end.latitude + point.latitude) / 3.0) * .pi / 180.0
+        let metersPerDegreeLatitude = 111_320.0
+        let metersPerDegreeLongitude = max(1.0, cos(meanLatitudeRadians) * 111_320.0)
+
+        let startX = start.longitude * metersPerDegreeLongitude
+        let startY = start.latitude * metersPerDegreeLatitude
+        let endX = end.longitude * metersPerDegreeLongitude
+        let endY = end.latitude * metersPerDegreeLatitude
+        let pointX = point.longitude * metersPerDegreeLongitude
+        let pointY = point.latitude * metersPerDegreeLatitude
+
+        let deltaX = endX - startX
+        let deltaY = endY - startY
+        let lengthSquared = (deltaX * deltaX) + (deltaY * deltaY)
+        guard lengthSquared > 0 else {
+            return hypot(pointX - startX, pointY - startY)
+        }
+
+        let projection = max(
+            0,
+            min(
+                1,
+                ((pointX - startX) * deltaX + (pointY - startY) * deltaY) / lengthSquared
+            )
+        )
+
+        let projectedX = startX + projection * deltaX
+        let projectedY = startY + projection * deltaY
+        return hypot(pointX - projectedX, pointY - projectedY)
     }
 
     @MainActor
@@ -381,6 +581,10 @@ final class AppState: ObservableObject {
         buildRealService(vin: vin)
         isAuthenticated = true
         settings.useSimulationMode = false
+    }
+
+    private func applyManualSOC() async {
+        await mockVehicleService.setCustomSOC(settings.simulatedSOCPercent)
     }
 
     private func buildRealService(vin: String) {

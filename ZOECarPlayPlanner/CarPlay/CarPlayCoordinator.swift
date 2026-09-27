@@ -1,87 +1,105 @@
 import CarPlay
-import Foundation
+import MapKit
+import UIKit
 
 // MARK: - CarPlayCoordinator
 
-/// Coordinateur CarPlay — gère les templates et la navigation dans l'interface embarquée.
-/// L'interface doit rester simple, lisible, et sûre pour la conduite.
+/// Coordinateur CarPlay centré sur les templates natifs du framework CarPlay.
+/// Aucun écran secondaire UIKit / SwiftUI n'est utilisé pour l'affichage embarqué.
 @available(iOS 14.0, *)
 @MainActor
 final class CarPlayCoordinator {
     private let interfaceController: CPInterfaceController
+    private let itineraryDestinationProvider: () -> MKMapItem?
 
-    init(interfaceController: CPInterfaceController) {
+    private lazy var mapTemplate: CPMapTemplate = {
+        let template = CPMapTemplate()
+        var buttons = [
+            makeSettingsButton(),
+        ]
+#if DEBUG
+        buttons.append(makeSendRouteButton())
+#else
+        if itineraryDestinationProvider() != nil {
+            buttons.append(makeSendRouteButton())
+        }
+#endif
+        template.mapButtons = buttons
+        return template
+    }()
+
+    init(
+        interfaceController: CPInterfaceController,
+        itineraryDestinationProvider: @escaping () -> MKMapItem? = { nil }
+    ) {
         self.interfaceController = interfaceController
+        self.itineraryDestinationProvider = itineraryDestinationProvider
     }
 
-    // MARK: - Templates
+    // MARK: - Root Template
 
-    func showMainTemplate() {
-        let template = buildMainListTemplate()
-        interfaceController.setRootTemplate(template, animated: true, completion: nil)
+    func showRootTemplate() {
+        interfaceController.setRootTemplate(mapTemplate, animated: true, completion: nil)
     }
 
-    // MARK: - Main List
+    // MARK: - Map Buttons
 
-    private func buildMainListTemplate() -> CPListTemplate {
-        let items = [
-            CPListItem(text: "ZOE", detailText: "82 % — 245 km"),
-            CPListItem(text: "Destination", detailText: "Appuyez pour planifier"),
-            CPListItem(text: "Plan de recharge", detailText: "Aucune recharge nécessaire")
+    private func makeSettingsButton() -> CPMapButton {
+        let button = CPMapButton { [weak self] _ in
+            self?.showSettingsTemplate()
+        }
+        button.image = UIImage(systemName: "gearshape.fill")
+        return button
+    }
+
+    private func makeSendRouteButton() -> CPMapButton {
+        let button = CPMapButton { [weak self] _ in
+            self?.sendTestRouteToAppleMaps()
+        }
+        button.image = UIImage(systemName: "location.north.fill")
+        return button
+    }
+
+    // MARK: - Settings
+
+    private func showSettingsTemplate() {
+        let settingsItems = [
+            CPListItem(text: "Niveau de batterie", detailText: "82 %"),
+            CPListItem(text: "Filtre de bornes", detailText: "Rapides uniquement"),
+            CPListItem(text: "Mode de paiement", detailText: "Carte bancaire")
         ]
 
-        let section = CPListSection(items: items)
-        let template = CPListTemplate(
-            title: "ZOE CarPlay Planner",
-            sections: [section]
-        )
-        return template
+        let section = CPListSection(items: settingsItems)
+        let template = CPListTemplate(title: "Réglages", sections: [section])
+        interfaceController.pushTemplate(template, animated: true, completion: nil)
     }
 
-    // MARK: - Route Result
+    // MARK: - Apple Maps
 
-    func showRoutePlan(plan: ChargingPlan, route: Route) {
-        var items: [CPListItem] = []
+    func sendRoute(to destinationItem: MKMapItem) {
+        destinationItem.openInMaps(launchOptions: [
+            MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving
+        ])
+    }
 
-        // Résumé du trajet
-        items.append(CPListItem(
-            text: "Trajet : \(route.displayDistance)",
-            detailText: "Arrivée estimée : \(plan.displayArrivalSOC)"
-        ))
-
-        // Arrêts de recharge
-        if plan.stops.isEmpty {
-            items.append(CPListItem(text: "Recharge", detailText: "Aucune recharge nécessaire"))
-        } else {
-            for (index, stop) in plan.stops.enumerated() {
-                let locationType = stop.station?.locationTypeLabel ?? "Type inconnu"
-                let item = CPListItem(
-                    text: "Recharge \(index + 1) — dans \(Int(stop.distanceFromOriginKm)) km",
-                    detailText: "\(stop.displayArrivalSOC) → \(stop.displayTargetSOC) · \(stop.displayDuration) · \(locationType)"
-                )
-                items.append(item)
-            }
+    private func sendTestRouteToAppleMaps() {
+        if let destinationItem = itineraryDestinationProvider() {
+            sendRoute(to: destinationItem)
+            return
         }
 
-        let section = CPListSection(items: items)
-        let template = CPListTemplate(title: "Plan de recharge", sections: [section])
-        interfaceController.pushTemplate(template, animated: true, completion: nil)
+#if DEBUG
+        sendRoute(to: makeDebugDestinationItem())
+#endif
     }
 
-    // MARK: - Information Template
-
-    func showVehicleInfo(status: VehicleStatus) {
-        let items: [CPInformationItem] = [
-            CPInformationItem(title: "Batterie", detail: status.battery.displayPercent),
-            CPInformationItem(title: "Autonomie", detail: "\(Int(status.battery.estimatedRangeKm)) km"),
-            CPInformationItem(title: "État", detail: status.charging.displayName)
-        ]
-        let template = CPInformationTemplate(
-            title: "ZOE",
-            layout: .twoColumn,
-            items: items,
-            actions: []
-        )
-        interfaceController.pushTemplate(template, animated: true, completion: nil)
+#if DEBUG
+    private func makeDebugDestinationItem() -> MKMapItem {
+        let destinationCoordinate = CLLocationCoordinate2D(latitude: 48.8566, longitude: 2.3522)
+        let destinationPlacemark = MKPlacemark(coordinate: destinationCoordinate)
+        let destinationItem = MKMapItem(placemark: destinationPlacemark)
+        destinationItem.name = "Station de recharge de test"
+        return destinationItem
     }
+#endif
 }

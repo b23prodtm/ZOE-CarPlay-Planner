@@ -2,6 +2,7 @@ import SwiftUI
 
 struct VehicleStatusView: View {
     let status: VehicleStatus
+    var showsMaterialBackground: Bool = true
 
     var body: some View {
         VStack(spacing: 24) {
@@ -42,8 +43,12 @@ struct VehicleStatusView: View {
             }
         }
         .padding()
-        .background(.regularMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 20))
+        .background {
+            if showsMaterialBackground {
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(.regularMaterial)
+            }
+        }
     }
 
     private var socColor: Color {

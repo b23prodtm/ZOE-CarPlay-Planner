@@ -267,6 +267,53 @@ final class MockRoutingTests: XCTestCase {
         XCTAssertTrue(stations.allSatisfy { [.electra, .totalEnergies, .allego, .local].contains($0.network) })
     }
 
+    func test_stationProvider_placesStationsAlongRoutePath() async throws {
+        let provider = MockChargingStationProvider()
+        let route = Route(
+            origin: RoutePoint(name: "A", coordinate: CLLocationCoordinate2D(latitude: 0, longitude: 0)),
+            destination: RoutePoint(name: "C", coordinate: CLLocationCoordinate2D(latitude: 1, longitude: 1), distanceFromOriginKm: 240),
+            totalDistanceKm: 240,
+            estimatedDurationMinutes: 180,
+            routePreferences: RoutePreferences(avoidHighways: false),
+            path: [
+                RouteCoordinate(latitude: 0, longitude: 0),
+                RouteCoordinate(latitude: 1, longitude: 0),
+                RouteCoordinate(latitude: 1, longitude: 1)
+            ]
+        )
+
+        let stations = try await provider.findStations(
+            along: route,
+            connectorTypes: Vehicle.defaultZOE.connectorTypes,
+            networks: ChargingNetwork.allCases
+        )
+
+        XCTAssertGreaterThanOrEqual(stations.count, 4)
+        XCTAssertTrue(stations.contains { abs($0.coordinate.longitude) < 0.05 }, "Au moins une borne doit rester sur le premier segment du trajet.")
+        XCTAssertTrue(stations.contains { $0.coordinate.latitude > 0.95 }, "Au moins une borne doit suivre la fin du parcours, pas la diagonale origine-destination.")
+        XCTAssertTrue(stations.allSatisfy { $0.name.contains("km") })
+    }
+
+    func test_stationProvider_generatesAlternativeChoicesNearSameStop() async throws {
+        let provider = MockChargingStationProvider()
+        let route = Route(
+            origin: RoutePoint(name: "Lyon", coordinate: lyon),
+            destination: RoutePoint(name: "Paris", coordinate: paris, distanceFromOriginKm: 400),
+            totalDistanceKm: 400,
+            estimatedDurationMinutes: 260,
+            routePreferences: RoutePreferences(avoidHighways: false)
+        )
+
+        let stations = try await provider.findStations(
+            along: route,
+            connectorTypes: Vehicle.defaultZOE.connectorTypes,
+            networks: ChargingNetwork.allCases
+        )
+
+        let nearbyAlternatives = stations.filter { abs($0.distanceFromRouteKm - 80) <= 10 }
+        XCTAssertGreaterThanOrEqual(nearbyAlternatives.count, 2)
+    }
+
     func test_route_originCoordinatePreserved() async throws {
         let route = try await provider.calculateRoute(from: lyon, to: geneve)
         XCTAssertEqual(route.origin.coordinate.latitude, lyon.latitude, accuracy: 0.001)
@@ -329,6 +376,8 @@ final class MockRoutingTests: XCTestCase {
 
         XCTAssertEqual(settings.selectedChargingNetworks, ChargingNetwork.allCases)
         XCTAssertEqual(settings.selectedConnectorTypes, [.type2AC, .ccs])
+        XCTAssertTrue(settings.preferHighwayStations)
+        XCTAssertEqual(settings.manualSOCSliderLayout, .centered)
         XCTAssertEqual(settings.preferredNavigationApp, .appleMaps)
         XCTAssertNil(settings.dashboardWallpaperFilename)
     }

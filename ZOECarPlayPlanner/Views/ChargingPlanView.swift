@@ -41,6 +41,16 @@ struct ChargingPlanView: View {
                     LabeledContent("Temps de recharge estimé", value: "≈ \(Int(plan.totalExtraTimeMinutes)) min")
                 }
 
+                Picker("Alternative", selection: Binding(
+                    get: { appState.chargingStationSelectionPreference },
+                    set: { appState.recalculateChargingStops(preference: $0) }
+                )) {
+                    ForEach(ChargingStationSelectionPreference.allCases, id: \.self) { preference in
+                        Text(preference.label).tag(preference)
+                    }
+                }
+                .pickerStyle(.segmented)
+
                 Button {
                     if !appState.openCurrentTripInPreferredNavigationApp(includeChargingStops: true) {
                         showNavigationError = true
@@ -59,7 +69,15 @@ struct ChargingPlanView: View {
             } else {
                 Section("Arrêts de recharge") {
                     ForEach(Array(plan.stops.enumerated()), id: \.element.id) { index, stop in
-                        ChargingStopRow(stop: stop, index: index + 1)
+                        ChargingStopRow(
+                            stop: stop,
+                            index: index + 1,
+                            selectedStation: appState.selectedStation(for: stop),
+                            stationOptions: appState.stationOptions(for: stop),
+                            onSelectStation: { station in
+                                appState.selectStation(station, for: stop)
+                            }
+                        )
                     }
                 }
             }
@@ -79,6 +97,9 @@ struct ChargingPlanView: View {
 struct ChargingStopRow: View {
     let stop: ChargingStop
     let index: Int
+    let selectedStation: ChargingStation?
+    let stationOptions: [ChargingStation]
+    let onSelectStation: (ChargingStation) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -103,10 +124,29 @@ struct ChargingStopRow: View {
             }
             .font(.subheadline)
 
-            if let station = stop.station {
-                Label(station.name, systemImage: "bolt.fill")
+            if let selectedStation {
+                Label(selectedStation.name, systemImage: "bolt.fill")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+
+                if stationOptions.count > 1 {
+                    Menu {
+                        ForEach(stationOptions) { station in
+                            Button {
+                                onSelectStation(station)
+                            } label: {
+                                Label(
+                                    "\(station.name) • \(station.displayPower)",
+                                    systemImage: station.id == selectedStation.id ? "checkmark.circle.fill" : "circle"
+                                )
+                            }
+                        }
+                    } label: {
+                        Label("Changer de borne", systemImage: "arrow.triangle.swap")
+                            .font(.caption.weight(.semibold))
+                    }
+                    .foregroundStyle(.blue)
+                }
             }
         }
         .padding(.vertical, 4)

@@ -266,6 +266,10 @@ struct RoutePlannerView: View {
 
             Toggle("Préférer les routes pittoresques", isOn: $appState.settings.routePreferences.preferScenic)
                 .tint(.purple)
+
+            Toggle("Privilégier les aires d'autoroute", isOn: $appState.settings.preferHighwayStations)
+                .tint(.green)
+                .disabled(appState.settings.routePreferences.avoidHighways)
         }
     }
 
