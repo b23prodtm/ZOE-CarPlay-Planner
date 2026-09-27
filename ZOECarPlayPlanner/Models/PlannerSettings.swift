@@ -12,6 +12,7 @@ final class PlannerSettings: ObservableObject, Codable {
     @Published var useSimulationMode: Bool
     @Published var simulatedSOCPercent: Double
     @Published var vehicle: Vehicle
+    @Published var routePreferences: RoutePreferences
 
     init(
         consumptionWhPerKm: Double = 170,
@@ -21,7 +22,8 @@ final class PlannerSettings: ObservableObject, Codable {
         preferredChargingPowerKW: Double = 22,
         useSimulationMode: Bool = true,
         simulatedSOCPercent: Double = 82,
-        vehicle: Vehicle = .defaultZOE
+        vehicle: Vehicle = .defaultZOE,
+        routePreferences: RoutePreferences = .init()
     ) {
         self.consumptionWhPerKm = consumptionWhPerKm
         self.minBatteryAtArrivalPercent = minBatteryAtArrivalPercent
@@ -31,6 +33,7 @@ final class PlannerSettings: ObservableObject, Codable {
         self.useSimulationMode = useSimulationMode
         self.simulatedSOCPercent = simulatedSOCPercent
         self.vehicle = vehicle
+        self.routePreferences = routePreferences
     }
 
     // MARK: Codable
@@ -38,7 +41,7 @@ final class PlannerSettings: ObservableObject, Codable {
     enum CodingKeys: String, CodingKey {
         case consumptionWhPerKm, minBatteryAtArrivalPercent, maxBatteryAfterChargePercent
         case safetyMarginPercent, preferredChargingPowerKW, useSimulationMode
-        case simulatedSOCPercent, vehicle
+        case simulatedSOCPercent, vehicle, routePreferences
     }
 
     required init(from decoder: Decoder) throws {
@@ -51,6 +54,7 @@ final class PlannerSettings: ObservableObject, Codable {
         useSimulationMode = try c.decodeIfPresent(Bool.self, forKey: .useSimulationMode) ?? true
         simulatedSOCPercent = try c.decodeIfPresent(Double.self, forKey: .simulatedSOCPercent) ?? 82
         vehicle = try c.decodeIfPresent(Vehicle.self, forKey: .vehicle) ?? .defaultZOE
+        routePreferences = try c.decodeIfPresent(RoutePreferences.self, forKey: .routePreferences) ?? .init()
     }
 
     func encode(to encoder: Encoder) throws {
@@ -63,6 +67,7 @@ final class PlannerSettings: ObservableObject, Codable {
         try c.encode(useSimulationMode, forKey: .useSimulationMode)
         try c.encode(simulatedSOCPercent, forKey: .simulatedSOCPercent)
         try c.encode(vehicle, forKey: .vehicle)
+        try c.encode(routePreferences, forKey: .routePreferences)
     }
 
     func save() {
