@@ -327,9 +327,12 @@ struct SettingsView: View {
                 throw CocoaError(.fileReadUnknown)
             }
 
-            DashboardWallpaperStore.deleteImage(named: appState.settings.dashboardWallpaperFilename)
+            let previousFilename = appState.settings.dashboardWallpaperFilename
             let filename = try DashboardWallpaperStore.saveImageData(data)
             appState.settings.dashboardWallpaperFilename = filename
+            if previousFilename != filename {
+                DashboardWallpaperStore.deleteImage(named: previousFilename)
+            }
             appState.settings.save()
             selectedWallpaperItem = nil
         } catch {

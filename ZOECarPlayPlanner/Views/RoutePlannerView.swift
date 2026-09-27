@@ -83,8 +83,7 @@ struct RoutePlannerView: View {
     }
 
     private var canCalculateRoute: Bool {
-        guard let origin = selectedOrigin, let destination = selectedDestination else { return false }
-        return !samePlace(origin, destination)
+        RoutePlannerValidation.canPlanTrip(origin: selectedOrigin, destination: selectedDestination)
     }
 
     var body: some View {
@@ -461,7 +460,10 @@ struct RoutePlannerView: View {
     private func useCurrentLocationAsOrigin() async {
         do {
             let coordinate = try await locationManager.requestCurrentCoordinate()
-            selectedOrigin = TripPlace(name: "Ma position actuelle", coordinate: coordinate)
+            applySelection(
+                TripPlace(name: "Ma position actuelle", coordinate: coordinate),
+                for: .origin
+            )
         } catch {
             selectionError = AppError.from(error)
         }
@@ -474,11 +476,6 @@ struct RoutePlannerView: View {
             selectedDestination = latestTrip.destination
             waypoints = latestTrip.waypoints
         }
-    }
-
-    private func samePlace(_ lhs: TripPlace, _ rhs: TripPlace) -> Bool {
-        abs(lhs.latitude - rhs.latitude) < 0.0001
-        && abs(lhs.longitude - rhs.longitude) < 0.0001
     }
 
     private func moveWaypoint(at index: Int, offset: Int) {
@@ -521,6 +518,18 @@ struct RoutePlannerView: View {
 private struct LocationPickerContext: Identifiable {
     let id = UUID()
     let target: LocationPickerTarget
+}
+
+enum RoutePlannerValidation {
+    static func canPlanTrip(origin: TripPlace?, destination: TripPlace?) -> Bool {
+        guard let origin, let destination else { return false }
+        return !samePlace(origin, destination)
+    }
+
+    static func samePlace(_ lhs: TripPlace, _ rhs: TripPlace) -> Bool {
+        abs(lhs.latitude - rhs.latitude) < 0.0001
+        && abs(lhs.longitude - rhs.longitude) < 0.0001
+    }
 }
 
 private enum LocationPickerTarget: Equatable {
@@ -578,6 +587,7 @@ private struct LocationPickerSheet: View {
                         } label: {
                             Label("Utiliser ma position GPS actuelle", systemImage: "location.fill")
                         }
+                        .disabled(isResolvingSelection)
                     }
                 }
 
@@ -741,6 +751,14 @@ private final class PlannerLocationManager: NSObject, ObservableObject, CLLocati
     }
 
     func requestCurrentCoordinate() async throws -> CLLocationCoordinate2D {
+        guard continuation == nil else {
+            throw NSError(
+                domain: "PlannerLocationManager",
+                code: 3,
+                userInfo: [NSLocalizedDescriptionKey: "Une demande de position GPS est déjà en cours."]
+            )
+        }
+
         if authorizationStatus == .notDetermined {
             try await requestAuthorizationIfNeeded()
         }
@@ -806,6 +824,13 @@ private final class PlannerLocationManager: NSObject, ObservableObject, CLLocati
 
     private func requestAuthorizationIfNeeded() async throws {
         guard authorizationStatus == .notDetermined else { return }
+        guard authorizationContinuation == nil else {
+            throw NSError(
+                domain: "PlannerLocationManager",
+                code: 4,
+                userInfo: [NSLocalizedDescriptionKey: "Une demande d’autorisation GPS est déjà en cours."]
+            )
+        }
 
         try await withCheckedThrowingContinuation { continuation in
             authorizationContinuation = continuation

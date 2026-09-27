@@ -332,4 +332,14 @@ final class MockRoutingTests: XCTestCase {
         XCTAssertEqual(settings.preferredNavigationApp, .appleMaps)
         XCTAssertNil(settings.dashboardWallpaperFilename)
     }
+
+    func test_routePlannerValidation_requiresDistinctOriginAndDestination() {
+        let lyonPlace = TripPlace(name: "Lyon", coordinate: lyon)
+        let genevePlace = TripPlace(name: "Genève", coordinate: geneve)
+
+        XCTAssertFalse(RoutePlannerValidation.canPlanTrip(origin: nil, destination: genevePlace))
+        XCTAssertFalse(RoutePlannerValidation.canPlanTrip(origin: lyonPlace, destination: nil))
+        XCTAssertFalse(RoutePlannerValidation.canPlanTrip(origin: lyonPlace, destination: lyonPlace))
+        XCTAssertTrue(RoutePlannerValidation.canPlanTrip(origin: lyonPlace, destination: genevePlace))
+    }
 }

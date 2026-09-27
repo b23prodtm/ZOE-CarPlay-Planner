@@ -416,6 +416,10 @@ final class AppState: ObservableObject {
     ) -> Bool {
         guard points.count >= 2 else { return false }
 
+        if preferredApp == .waze || preferredApp == .roole, points.count > 2 {
+            return open(points: points, in: .appleMaps)
+        }
+
         if navigationAppIsAvailable(preferredApp), open(points: points, in: preferredApp) {
             return true
         }
