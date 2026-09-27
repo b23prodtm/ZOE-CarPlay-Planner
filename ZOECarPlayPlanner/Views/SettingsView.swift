@@ -44,6 +44,9 @@ struct SettingsView: View {
             .onChange(of: appState.settings.preferredNavigationApp) { _, _ in
                 appState.settings.save()
             }
+            .onAppear {
+                appState.refreshAvailableNavigationApps()
+            }
         }
     }
 

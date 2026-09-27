@@ -145,9 +145,13 @@ enum DashboardWallpaperStore {
     private static let directoryName = "DashboardWallpaper"
 
     static func saveImageData(_ data: Data) throws -> String {
-        let image = UIImage(data: data)
-        let preparedImage = image?.resizedForDashboard() ?? image
-        let jpegData = preparedImage?.jpegData(compressionQuality: 0.82) ?? data
+        guard let image = UIImage(data: data) else {
+            throw CocoaError(.fileReadCorruptFile)
+        }
+        let preparedImage = image.resizedForDashboard()
+        guard let jpegData = preparedImage.jpegData(compressionQuality: 0.82) else {
+            throw CocoaError(.fileWriteUnknown)
+        }
 
         let directory = try makeDirectoryIfNeeded()
         let filename = "wallpaper.jpg"

@@ -389,7 +389,7 @@ final class AppState: ObservableObject {
         try? KeychainCredentialStore().store(value: vin, forKey: "renault_vin")
     }
 
-    private func refreshAvailableNavigationApps() {
+    func refreshAvailableNavigationApps() {
         let allApps = PreferredNavigationApp.allCases
         availableNavigationApps = allApps.filter { navigationAppIsAvailable($0) }
         if !availableNavigationApps.contains(settings.preferredNavigationApp) {
@@ -446,11 +446,11 @@ final class AppState: ObservableObject {
             return true
         case .googleMaps:
             guard let origin = points.first else { return false }
-            let destinationChain = points.dropFirst().map {
+            let routeStops = points.dropFirst().map {
                 "\($0.coordinate.latitude),\($0.coordinate.longitude)"
             }
-            guard let finalDestination = destinationChain.first else { return false }
-            let intermediateStops = Array(destinationChain.dropFirst())
+            guard let finalDestination = routeStops.last else { return false }
+            let intermediateStops = Array(routeStops.dropLast())
             let stopSuffix = intermediateStops.isEmpty ? "" : "+to:" + intermediateStops.joined(separator: "+to:")
             var components = URLComponents()
             components.scheme = "comgooglemaps"
