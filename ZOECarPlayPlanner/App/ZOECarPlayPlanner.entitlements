@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+		Entitlement CarPlay — Information App
+		
+		PRÉREQUIS : Cet entitlement doit être approuvé par Apple avant utilisation.
+		Demander l'accès sur : https://developer.apple.com/carplay/
+		
+		Une fois accordé :
+		1. Activer l'entitlement dans Xcode → Signing & Capabilities → + Capability → CarPlay
+		2. Ce fichier sera mis à jour automatiquement par Xcode.
+		3. Activer la configuration CPTemplateApplicationScene dans Info.plist
+		   (voir le commentaire dans Info.plist).
+		
+		Types d'entitlements CarPlay disponibles :
+		  - com.apple.developer.carplay-information   (app d'information, type recommandé pour ZOE Planner)
+		  - com.apple.developer.carplay-navigation    (app de navigation GPS complète)
+		  - com.apple.developer.carplay-audio         (app audio)
+		  - com.apple.developer.carplay-communication (app de communication)
+		
+		Pour le simulateur CarPlay (développement) : aucun entitlement requis.
+	-->
+	
+	<!-- Décommenter après approbation Apple :
+	<key>com.apple.developer.carplay-information</key>
+	<true/>
+	-->
+</dict>
+</plist>

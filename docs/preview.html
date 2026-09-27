@@ -1,0 +1,1335 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ZOE CarPlay Planner — Aperçu UI</title>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       DESIGN SYSTEM — Variables CSS globales
+       Reproduit le style SwiftUI : couleurs système iOS, SF Pro,
+       matériaux, coins arrondis, espacement.
+  ═══════════════════════════════════════════════════════════════ -->
+  <style>
+    /* ── Tokens ───────────────────────────────────────────────── */
+    :root {
+      --color-bg:           #000000;
+      --color-bg-secondary: #1c1c1e;
+      --color-bg-tertiary:  #2c2c2e;
+      --color-surface:      rgba(44,44,46,.85);
+      --color-border:       rgba(255,255,255,.12);
+
+      --color-label:        #ffffff;
+      --color-secondary:    rgba(235,235,245,.6);
+      --color-tertiary:     rgba(235,235,245,.3);
+
+      --color-green:        #30d158;
+      --color-orange:       #ff9f0a;
+      --color-red:          #ff453a;
+      --color-blue:         #0a84ff;
+      --color-yellow:       #ffd60a;
+      --color-carplay-bg:   #1a1a2e;
+      --color-carplay-accent:#00d4aa;
+
+      --radius-sm:  8px;
+      --radius-md:  12px;
+      --radius-lg:  20px;
+      --radius-xl:  28px;
+
+      --space-xs:  4px;
+      --space-sm:  8px;
+      --space-md:  16px;
+      --space-lg:  24px;
+      --space-xl:  32px;
+
+      --font-family: -apple-system, "SF Pro Display", "SF Pro Text",
+                     "Helvetica Neue", system-ui, sans-serif;
+      --font-mono:   "SF Mono", "Fira Code", "Cascadia Code", monospace;
+
+      --shadow-card: 0 4px 24px rgba(0,0,0,.5);
+      --transition:  .2s cubic-bezier(.4,0,.2,1);
+    }
+
+    /* ── Reset ────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; scroll-behavior: smooth; }
+    body {
+      background: var(--color-bg);
+      color: var(--color-label);
+      font-family: var(--font-family);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Typographie ──────────────────────────────────────────── */
+    .text-large-title { font-size: 34px; font-weight: 700; letter-spacing: .3px; }
+    .text-title1      { font-size: 28px; font-weight: 700; }
+    .text-title2      { font-size: 22px; font-weight: 700; }
+    .text-headline    { font-size: 17px; font-weight: 600; }
+    .text-body        { font-size: 17px; font-weight: 400; }
+    .text-subheadline { font-size: 15px; font-weight: 400; }
+    .text-caption     { font-size: 12px; font-weight: 400; color: var(--color-secondary); }
+    .text-caption2    { font-size: 11px; font-weight: 400; color: var(--color-tertiary); }
+    .text-secondary   { color: var(--color-secondary); }
+    .text-green       { color: var(--color-green); }
+    .text-orange      { color: var(--color-orange); }
+    .text-red         { color: var(--color-red); }
+    .text-blue        { color: var(--color-blue); }
+
+    /* ── Mise en page principale ──────────────────────────────── */
+    .app-shell {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: var(--space-xl) var(--space-md) 80px;
+      gap: var(--space-xl);
+    }
+
+    /* ── Titre de section ─────────────────────────────────────── */
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      margin-bottom: var(--space-sm);
+    }
+    .section-header h2 {
+      font-size: 13px;
+      font-weight: 400;
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      color: var(--color-secondary);
+    }
+
+    /* ── Phone frame ──────────────────────────────────────────── */
+    .phone-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-sm);
+    }
+    .phone-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--color-secondary);
+      text-transform: uppercase;
+      letter-spacing: .8px;
+    }
+    .phone-frame {
+      width: 390px;
+      min-height: 680px;
+      background: var(--color-bg-secondary);
+      border-radius: 48px;
+      border: 2.5px solid var(--color-border);
+      overflow: hidden;
+      box-shadow: var(--shadow-card), inset 0 0 0 1px rgba(255,255,255,.05);
+      position: relative;
+    }
+    /* Notch dynamique */
+    .phone-frame::before {
+      content: "";
+      display: block;
+      width: 120px;
+      height: 34px;
+      background: #000;
+      border-radius: 0 0 20px 20px;
+      margin: 0 auto;
+    }
+
+    /* ── Tab bar ──────────────────────────────────────────────── */
+    .tab-bar {
+      position: sticky;
+      bottom: 0;
+      background: rgba(28,28,30,.95);
+      backdrop-filter: blur(20px);
+      border-top: 1px solid var(--color-border);
+      display: flex;
+      justify-content: space-around;
+      padding: 8px 0 20px;
+    }
+    .tab-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      cursor: pointer;
+      padding: 4px 12px;
+      border-radius: var(--radius-sm);
+      transition: var(--transition);
+    }
+    .tab-item:hover { background: rgba(255,255,255,.06); }
+    .tab-item .tab-icon { font-size: 22px; }
+    .tab-item .tab-label { font-size: 10px; color: var(--color-secondary); font-weight: 500; }
+    .tab-item.active .tab-icon  { filter: drop-shadow(0 0 6px var(--color-green)); }
+    .tab-item.active .tab-label { color: var(--color-green); font-weight: 700; }
+
+    /* ── Scrollable screen content ────────────────────────────── */
+    .screen-content {
+      padding: var(--space-md) var(--space-md) var(--space-lg);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-lg);
+      overflow-y: auto;
+      max-height: 560px;
+    }
+    .screen-title {
+      font-size: 34px;
+      font-weight: 700;
+      letter-spacing: .3px;
+      padding: var(--space-xs) 0;
+    }
+
+    /* ── Card ─────────────────────────────────────────────────── */
+    .card {
+      background: var(--color-surface);
+      backdrop-filter: blur(20px);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--color-border);
+      padding: var(--space-lg);
+      box-shadow: var(--shadow-card);
+    }
+    .card-sm { padding: var(--space-md); border-radius: var(--radius-md); }
+
+    /* ── Batterie widget ──────────────────────────────────────── */
+    .battery-widget {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-md);
+    }
+    .battery-big {
+      display: flex;
+      align-items: flex-end;
+      gap: 4px;
+      line-height: 1;
+    }
+    .battery-big .value {
+      font-size: 80px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+    .battery-big .unit {
+      font-size: 36px;
+      font-weight: 600;
+      padding-bottom: 12px;
+    }
+    .battery-bar-track {
+      width: 100%;
+      height: 8px;
+      background: var(--color-bg-tertiary);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .battery-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width .6s ease;
+    }
+    .meta-row {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      color: var(--color-secondary);
+      font-size: 15px;
+    }
+
+    /* ── Status dot ───────────────────────────────────────────── */
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* ── Dashboard buttons ────────────────────────────────────── */
+    .dash-btn {
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+      padding: var(--space-md);
+      border-radius: var(--radius-md);
+      border: none;
+      cursor: pointer;
+      width: 100%;
+      transition: var(--transition);
+      font-family: var(--font-family);
+      text-align: left;
+    }
+    .dash-btn:hover { filter: brightness(1.15); }
+    .dash-btn:active { transform: scale(.98); }
+    .dash-btn .icon { font-size: 22px; }
+    .dash-btn .label { font-size: 17px; font-weight: 600; flex: 1; }
+    .dash-btn .chevron { font-size: 14px; opacity: .5; margin-left: auto; }
+
+    .dash-btn-blue   { background: rgba(10,132,255,.15); color: var(--color-blue); }
+    .dash-btn-green  { background: rgba(48,209,88,.15);  color: var(--color-green); }
+    .dash-btn-gray   { background: rgba(255,255,255,.08); color: var(--color-secondary); }
+    .dash-btn-orange { background: rgba(255,159,10,.15);  color: var(--color-orange); }
+
+    /* ── Form / settings ──────────────────────────────────────── */
+    .form-section {
+      background: var(--color-surface);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-border);
+      overflow: hidden;
+    }
+    .form-section-header {
+      padding: var(--space-sm) var(--space-md);
+      font-size: 13px;
+      font-weight: 400;
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      color: var(--color-secondary);
+      background: transparent;
+    }
+    .form-row {
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+      padding: 12px var(--space-md);
+      border-top: 1px solid var(--color-border);
+      min-height: 44px;
+    }
+    .form-row:first-of-type { border-top: none; }
+    .form-row label { font-size: 17px; flex: 1; }
+    .form-row .value { font-size: 17px; color: var(--color-secondary); }
+    .form-row input[type="text"],
+    .form-row input[type="email"],
+    .form-row input[type="password"] {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--color-label);
+      font-family: var(--font-family);
+      font-size: 17px;
+      flex: 1;
+      text-align: right;
+    }
+    .form-row input::placeholder { color: var(--color-tertiary); }
+    .form-row input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      background: transparent;
+      flex: 1;
+      height: 4px;
+      accent-color: var(--color-green);
+    }
+
+    /* ── Toggle ───────────────────────────────────────────────── */
+    .toggle-wrap { display: flex; align-items: center; gap: var(--space-sm); }
+    .toggle {
+      position: relative;
+      width: 51px;
+      height: 31px;
+      cursor: pointer;
+    }
+    .toggle input { display: none; }
+    .toggle-track {
+      position: absolute;
+      inset: 0;
+      border-radius: 16px;
+      background: var(--color-bg-tertiary);
+      transition: var(--transition);
+    }
+    .toggle input:checked ~ .toggle-track { background: var(--color-orange); }
+    .toggle-thumb {
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 27px;
+      height: 27px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 2px 6px rgba(0,0,0,.4);
+      transition: var(--transition);
+    }
+    .toggle input:checked ~ .toggle-track ~ .toggle-thumb,
+    .toggle input:checked + .toggle-track + .toggle-thumb { left: 22px; }
+
+    /* ── Charging stops ───────────────────────────────────────── */
+    .stop-card {
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-border);
+      overflow: hidden;
+    }
+    .stop-header {
+      background: rgba(255,159,10,.12);
+      padding: 10px var(--space-md);
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--color-orange);
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+    }
+    .stop-body {
+      padding: var(--space-md);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      background: var(--color-surface);
+    }
+    .stop-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 15px;
+    }
+    .stop-row .key { color: var(--color-secondary); }
+    .stop-row .val { font-weight: 600; }
+    .soc-arrow {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* ── Destination picker ───────────────────────────────────── */
+    .dest-list { display: flex; flex-direction: column; gap: 2px; }
+    .dest-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+      padding: 14px var(--space-md);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: var(--transition);
+      font-size: 17px;
+      border: 1px solid transparent;
+    }
+    .dest-item:hover { background: rgba(255,255,255,.06); }
+    .dest-item.selected {
+      background: rgba(10,132,255,.12);
+      border-color: rgba(10,132,255,.3);
+    }
+    .dest-item .dest-name { flex: 1; }
+    .dest-item .dest-dist { font-size: 14px; color: var(--color-secondary); }
+    .dest-check { color: var(--color-green); font-size: 18px; }
+
+    /* ── Result summary ───────────────────────────────────────── */
+    .result-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-sm);
+    }
+    .result-cell {
+      background: var(--color-bg-tertiary);
+      border-radius: var(--radius-md);
+      padding: var(--space-md);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .result-cell .result-label { font-size: 12px; color: var(--color-secondary); text-transform: uppercase; letter-spacing: .4px; }
+    .result-cell .result-value { font-size: 24px; font-weight: 700; }
+
+    /* ── Simulation badge ─────────────────────────────────────── */
+    .sim-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255,159,10,.15);
+      color: var(--color-orange);
+      border-radius: 20px;
+      padding: 5px 12px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    /* ── Connected badge ──────────────────────────────────────── */
+    .conn-badge {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      background: rgba(48,209,88,.1);
+      border: 1px solid rgba(48,209,88,.2);
+      border-radius: var(--radius-md);
+      padding: var(--space-md);
+    }
+    .conn-badge-icon { font-size: 28px; }
+    .conn-info .title { font-size: 15px; font-weight: 700; color: var(--color-green); }
+    .conn-info .sub   { font-size: 13px; color: var(--color-secondary); }
+    .disconnect-btn {
+      margin-left: auto;
+      background: rgba(255,69,58,.12);
+      color: var(--color-red);
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 6px 12px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: var(--font-family);
+      transition: var(--transition);
+    }
+    .disconnect-btn:hover { background: rgba(255,69,58,.22); }
+
+    /* ── CarPlay frame ────────────────────────────────────────── */
+    .carplay-outer {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-sm);
+    }
+    .carplay-frame {
+      width: 760px;
+      height: 440px;
+      background: var(--color-carplay-bg);
+      border-radius: var(--radius-lg);
+      border: 2px solid rgba(0,212,170,.25);
+      overflow: hidden;
+      box-shadow: var(--shadow-card), 0 0 40px rgba(0,212,170,.08);
+      display: flex;
+      flex-direction: column;
+    }
+    .cp-header {
+      background: rgba(0,212,170,.08);
+      border-bottom: 1px solid rgba(0,212,170,.15);
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .cp-header .cp-app-icon { font-size: 22px; }
+    .cp-header .cp-app-name { font-size: 16px; font-weight: 700; color: var(--color-carplay-accent); flex: 1; }
+    .cp-header .cp-time { font-size: 14px; color: var(--color-secondary); font-variant-numeric: tabular-nums; }
+    .cp-body {
+      flex: 1;
+      display: flex;
+    }
+    /* Left panel — main info */
+    .cp-main {
+      flex: 1;
+      padding: 20px 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      border-right: 1px solid rgba(255,255,255,.08);
+    }
+    .cp-soc-row {
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+    }
+    .cp-soc-val {
+      font-size: 72px;
+      font-weight: 800;
+      color: var(--color-green);
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+    .cp-soc-unit { font-size: 28px; font-weight: 600; color: var(--color-green); padding-bottom: 10px; }
+    .cp-range { font-size: 18px; color: var(--color-secondary); margin-top: 4px; }
+    .cp-dest-label { font-size: 12px; text-transform: uppercase; letter-spacing: .8px; color: var(--color-secondary); }
+    .cp-dest-name  { font-size: 22px; font-weight: 700; margin-top: 2px; }
+    .cp-dist       { font-size: 16px; color: var(--color-secondary); }
+    .cp-arrival-label { font-size: 12px; text-transform: uppercase; letter-spacing: .8px; color: var(--color-secondary); }
+    .cp-arrival-val   { font-size: 24px; font-weight: 700; margin-top: 2px; color: var(--color-green); }
+    /* Right panel — stops list */
+    .cp-sidebar {
+      width: 260px;
+      padding: 12px 0;
+      overflow-y: auto;
+    }
+    .cp-list-item {
+      padding: 14px 20px;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .cp-list-item:hover { background: rgba(255,255,255,.04); }
+    .cp-list-item.active { background: rgba(0,212,170,.08); border-left: 3px solid var(--color-carplay-accent); }
+    .cp-list-title { font-size: 15px; font-weight: 600; }
+    .cp-list-sub   { font-size: 13px; color: var(--color-secondary); margin-top: 3px; }
+
+    /* ── Info callout ─────────────────────────────────────────── */
+    .info-callout {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-sm);
+      background: rgba(10,132,255,.08);
+      border: 1px solid rgba(10,132,255,.15);
+      border-radius: var(--radius-sm);
+      padding: var(--space-sm) var(--space-md);
+      font-size: 12px;
+      color: var(--color-secondary);
+    }
+
+    /* ── Primary action button ────────────────────────────────── */
+    .btn-primary {
+      width: 100%;
+      padding: 16px;
+      background: var(--color-blue);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-md);
+      font-family: var(--font-family);
+      font-size: 17px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn-primary:hover  { background: #1b8ef8; }
+    .btn-primary:active { transform: scale(.98); }
+    .btn-primary.green  { background: var(--color-green); }
+    .btn-primary.green:hover { background: #28c44e; }
+
+    /* ── Page header ──────────────────────────────────────────── */
+    .page-title-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 0 var(--space-xs);
+    }
+    .page-title-bar h1 { font-size: 34px; font-weight: 700; }
+    .page-title-bar .subtitle { font-size: 13px; color: var(--color-secondary); }
+
+    /* ── Horizontal layout for desktops ──────────────────────── */
+    .flex-row  { display: flex; gap: var(--space-xl); align-items: flex-start; flex-wrap: wrap; justify-content: center; }
+    .flex-col  { display: flex; flex-direction: column; gap: var(--space-lg); }
+
+    /* ── Section divider ──────────────────────────────────────── */
+    .section-divider {
+      width: 100%;
+      max-width: 900px;
+      border: none;
+      border-top: 1px solid var(--color-border);
+      margin: var(--space-md) 0;
+    }
+
+    /* ── Design tokens reference panel ───────────────────────── */
+    .tokens-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: var(--space-sm);
+    }
+    .token-swatch {
+      border-radius: var(--radius-sm);
+      padding: var(--space-md);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      border: 1px solid var(--color-border);
+    }
+    .token-color {
+      width: 100%;
+      height: 32px;
+      border-radius: 6px;
+    }
+    .token-name  { font-size: 11px; font-family: var(--font-mono); color: var(--color-secondary); }
+    .token-value { font-size: 11px; font-family: var(--font-mono); color: var(--color-tertiary); }
+
+    /* ── Scrollbar ────────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
+
+    /* ── Responsive ───────────────────────────────────────────── */
+    @media (max-width: 820px) {
+      .carplay-frame { width: 100%; height: auto; min-height: 360px; }
+      .cp-sidebar { width: 160px; }
+    }
+    @media (max-width: 440px) {
+      .phone-frame { width: 100%; border-radius: 0; border-left: none; border-right: none; }
+    }
+
+    /* ── Page top nav ─────────────────────────────────────────── */
+    .top-nav {
+      width: 100%;
+      background: rgba(28,28,30,.9);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--color-border);
+      padding: var(--space-sm) var(--space-xl);
+      display: flex;
+      align-items: center;
+      gap: var(--space-lg);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .top-nav .logo { font-size: 18px; font-weight: 700; color: var(--color-green); }
+    .top-nav .nav-links { display: flex; gap: var(--space-md); margin-left: auto; }
+    .top-nav a {
+      font-size: 13px;
+      color: var(--color-secondary);
+      text-decoration: none;
+      padding: 4px 10px;
+      border-radius: 6px;
+      transition: var(--transition);
+    }
+    .top-nav a:hover { background: rgba(255,255,255,.06); color: var(--color-label); }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     NAVIGATION SUPÉRIEURE
+════════════════════════════════════════════════════════════════ -->
+<nav class="top-nav">
+  <span class="logo">⚡ ZOE CarPlay Planner</span>
+  <div class="nav-links">
+    <a href="#iphone">iPhone</a>
+    <a href="#carplay">CarPlay</a>
+    <a href="#tokens">Design System</a>
+  </div>
+</nav>
+
+<main class="app-shell">
+
+  <!-- ══════════════════════════════════════════════════════════
+       TITRE DE PAGE
+  ══════════════════════════════════════════════════════════════ -->
+  <div style="text-align:center; padding-top: 8px;">
+    <p class="text-large-title">Aperçu Interface</p>
+    <p class="text-secondary" style="margin-top:6px; font-size:15px;">ZOECarPlayPlanner — Swift 6 / iOS 17+</p>
+    <div style="margin-top:12px; display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
+      <span class="sim-badge">🖥️ Mode simulation</span>
+      <span class="sim-badge" style="background:rgba(10,132,255,.12);color:var(--color-blue);">📱 SwiftUI</span>
+      <span class="sim-badge" style="background:rgba(0,212,170,.12);color:var(--color-carplay-accent);">🚗 CarPlay</span>
+    </div>
+  </div>
+
+  <hr class="section-divider" />
+
+  <!-- ══════════════════════════════════════════════════════════
+       ÉCRANS iPHONE
+  ══════════════════════════════════════════════════════════════ -->
+  <div class="section-header" id="iphone">
+    <h2>📱 Interface iPhone</h2>
+  </div>
+
+  <div class="flex-row">
+
+    <!-- ── 1. Dashboard ───────────────────────────────────────── -->
+    <div class="phone-wrapper">
+      <span class="phone-label">Accueil</span>
+      <div class="phone-frame">
+        <div class="screen-content">
+          <div class="page-title-bar">
+            <h1 class="screen-title">ZOE CarPlay<br>Planner</h1>
+          </div>
+
+          <!-- Batterie widget -->
+          <div class="card">
+            <div class="battery-widget">
+              <div class="battery-big">
+                <span class="value text-green">82</span>
+                <span class="unit text-green">%</span>
+              </div>
+              <div class="battery-bar-track" style="width:100%">
+                <div class="battery-bar-fill" style="width:82%; background:var(--color-green);"></div>
+              </div>
+              <div class="meta-row">
+                <span>🛣️</span>
+                <span>Autonomie estimée : <strong>245 km</strong></span>
+              </div>
+              <div class="meta-row">
+                <div class="status-dot" style="background:var(--color-green);"></div>
+                <span>Connecté</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Boutons -->
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <button class="dash-btn dash-btn-blue">
+              <span class="icon">🗺️</span>
+              <span class="label">Planifier un trajet</span>
+              <span class="chevron">›</span>
+            </button>
+            <button class="dash-btn dash-btn-orange">
+              <span class="icon">⚡</span>
+              <span class="label">Recharge</span>
+              <span class="chevron">›</span>
+            </button>
+            <button class="dash-btn dash-btn-green">
+              <span class="icon">↺</span>
+              <span class="label">Actualiser</span>
+              <span class="chevron">›</span>
+            </button>
+            <button class="dash-btn dash-btn-gray">
+              <span class="icon">⚙️</span>
+              <span class="label">Réglages</span>
+              <span class="chevron">›</span>
+            </button>
+          </div>
+
+          <div style="display:flex;justify-content:center;">
+            <span class="sim-badge">🖥️ Mode simulation actif</span>
+          </div>
+        </div>
+
+        <!-- Tab bar -->
+        <div class="tab-bar">
+          <div class="tab-item active">
+            <span class="tab-icon">🚗</span>
+            <span class="tab-label">Accueil</span>
+          </div>
+          <div class="tab-item">
+            <span class="tab-icon">🗺️</span>
+            <span class="tab-label">Trajet</span>
+          </div>
+          <div class="tab-item">
+            <span class="tab-icon">⚡</span>
+            <span class="tab-label">Recharge</span>
+          </div>
+          <div class="tab-item">
+            <span class="tab-icon">⚙️</span>
+            <span class="tab-label">Réglages</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── 2. Trajet ───────────────────────────────────────────── -->
+    <div class="phone-wrapper">
+      <span class="phone-label">Planifier un trajet</span>
+      <div class="phone-frame">
+        <div class="screen-content">
+          <div class="screen-title">Planifier<br>un trajet</div>
+
+          <!-- Départ -->
+          <div class="form-section">
+            <div class="form-section-header">Départ</div>
+            <div class="form-row">
+              <span>📍</span>
+              <label style="color:var(--color-blue)">Lyon (simulation)</label>
+            </div>
+          </div>
+
+          <!-- Destination -->
+          <div class="form-section">
+            <div class="form-section-header">Destination</div>
+            <div class="dest-list">
+              <div class="dest-item selected" onclick="selectDest(this,'Genève','150 km')">
+                <span>🇨🇭</span>
+                <span class="dest-name">Genève</span>
+                <span class="dest-dist">~150 km</span>
+                <span class="dest-check">✓</span>
+              </div>
+              <div class="dest-item" onclick="selectDest(this,'Paris','465 km')">
+                <span>🗼</span>
+                <span class="dest-name">Paris</span>
+                <span class="dest-dist">~465 km</span>
+                <span class="dest-check" style="opacity:0">✓</span>
+              </div>
+              <div class="dest-item" onclick="selectDest(this,'Marseille','310 km')">
+                <span>🌊</span>
+                <span class="dest-name">Marseille</span>
+                <span class="dest-dist">~310 km</span>
+                <span class="dest-check" style="opacity:0">✓</span>
+              </div>
+              <div class="dest-item" onclick="selectDest(this,'Bordeaux','555 km')">
+                <span>🍷</span>
+                <span class="dest-name">Bordeaux</span>
+                <span class="dest-dist">~555 km</span>
+                <span class="dest-check" style="opacity:0">✓</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Résultat trajet -->
+          <div class="card card-sm" id="route-result">
+            <div class="form-section-header" style="padding:0 0 8px; border-bottom:1px solid var(--color-border); margin-bottom:10px;">Résultat</div>
+            <div class="result-grid">
+              <div class="result-cell">
+                <span class="result-label">Distance</span>
+                <span class="result-value" id="res-dist">150 km</span>
+              </div>
+              <div class="result-cell">
+                <span class="result-label">Durée estimée</span>
+                <span class="result-value">1 h 45</span>
+              </div>
+            </div>
+          </div>
+
+          <button class="btn-primary" onclick="calculateRoute()">
+            🧮 Calculer le trajet
+          </button>
+        </div>
+
+        <div class="tab-bar">
+          <div class="tab-item"><span class="tab-icon">🚗</span><span class="tab-label">Accueil</span></div>
+          <div class="tab-item active"><span class="tab-icon">🗺️</span><span class="tab-label">Trajet</span></div>
+          <div class="tab-item"><span class="tab-icon">⚡</span><span class="tab-label">Recharge</span></div>
+          <div class="tab-item"><span class="tab-icon">⚙️</span><span class="tab-label">Réglages</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── 3. Plan de recharge ──────────────────────────────────── -->
+    <div class="phone-wrapper">
+      <span class="phone-label">Plan de recharge</span>
+      <div class="phone-frame">
+        <div class="screen-content">
+          <div class="screen-title">Plan de<br>recharge</div>
+
+          <!-- Résumé -->
+          <div class="form-section">
+            <div class="form-section-header">Résumé — Lyon → Paris</div>
+            <div class="form-row">
+              <label>Trajet</label>
+              <span class="value">465 km</span>
+            </div>
+            <div class="form-row">
+              <label>Recharges prévues</label>
+              <span class="value">2</span>
+            </div>
+            <div class="form-row">
+              <label>Batterie à l'arrivée</label>
+              <span class="value text-green">22 %</span>
+            </div>
+            <div class="form-row">
+              <label>Temps de recharge estimé</label>
+              <span class="value">≈ 75 min</span>
+            </div>
+          </div>
+
+          <!-- Stops -->
+          <div class="stop-card">
+            <div class="stop-header">
+              ⚡ Recharge 1
+              <span style="font-size:13px; font-weight:400; color:var(--color-secondary); margin-left:auto;">Borne Ionity #1</span>
+            </div>
+            <div class="stop-body">
+              <div class="stop-row"><span class="key">📍 À</span><span class="val">172 km</span></div>
+              <div class="stop-row">
+                <span class="key">🔋 SOC</span>
+                <div class="soc-arrow">
+                  <span class="val text-red">18 %</span>
+                  <span style="color:var(--color-secondary)">→</span>
+                  <span class="val text-green">75 %</span>
+                </div>
+              </div>
+              <div class="stop-row"><span class="key">⏱ Durée</span><span class="val">≈ 38 min</span></div>
+              <div class="stop-row"><span class="key">⚡ Énergie</span><span class="val">28.5 kWh</span></div>
+            </div>
+          </div>
+
+          <div class="stop-card">
+            <div class="stop-header">
+              ⚡ Recharge 2
+              <span style="font-size:13px; font-weight:400; color:var(--color-secondary); margin-left:auto;">Borne Ionity #2</span>
+            </div>
+            <div class="stop-body">
+              <div class="stop-row"><span class="key">📍 À</span><span class="val">340 km</span></div>
+              <div class="stop-row">
+                <span class="key">🔋 SOC</span>
+                <div class="soc-arrow">
+                  <span class="val text-red">21 %</span>
+                  <span style="color:var(--color-secondary)">→</span>
+                  <span class="val text-green">75 %</span>
+                </div>
+              </div>
+              <div class="stop-row"><span class="key">⏱ Durée</span><span class="val">≈ 37 min</span></div>
+              <div class="stop-row"><span class="key">⚡ Énergie</span><span class="val">27.0 kWh</span></div>
+            </div>
+          </div>
+
+          <div class="info-callout">
+            <span>ℹ️</span>
+            <span>Les durées et niveaux indiqués sont des estimations.</span>
+          </div>
+        </div>
+
+        <div class="tab-bar">
+          <div class="tab-item"><span class="tab-icon">🚗</span><span class="tab-label">Accueil</span></div>
+          <div class="tab-item"><span class="tab-icon">🗺️</span><span class="tab-label">Trajet</span></div>
+          <div class="tab-item active"><span class="tab-icon">⚡</span><span class="tab-label">Recharge</span></div>
+          <div class="tab-item"><span class="tab-icon">⚙️</span><span class="tab-label">Réglages</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── 4. Réglages ─────────────────────────────────────────── -->
+    <div class="phone-wrapper">
+      <span class="phone-label">Réglages</span>
+      <div class="phone-frame">
+        <div class="screen-content">
+          <div class="screen-title">Réglages</div>
+
+          <!-- Connexion Renault -->
+          <div class="form-section">
+            <div class="form-section-header">🔑 Compte Renault / MyRenault</div>
+            <!-- État non connecté -->
+            <div id="login-form">
+              <div class="form-row">
+                <label>Email MyRenault</label>
+                <input type="email" placeholder="email@renault.fr" />
+              </div>
+              <div class="form-row">
+                <label>Mot de passe</label>
+                <input type="password" placeholder="••••••••" />
+              </div>
+              <div class="form-row">
+                <label>VIN</label>
+                <input type="text" placeholder="VF1XXXXXXXXXXXXX" />
+              </div>
+              <div class="form-row" style="border-top:1px solid var(--color-border)">
+                <button class="btn-primary" style="font-size:15px; padding:12px;" onclick="toggleConnect()">
+                  ⚡ Se connecter à MyRenault
+                </button>
+              </div>
+              <div class="form-row">
+                <span class="text-caption2" style="text-align:center; width:100%;">
+                  Vos identifiants sont stockés uniquement dans le Keychain de votre iPhone.
+                </span>
+              </div>
+            </div>
+            <!-- État connecté (masqué par défaut) -->
+            <div id="connected-state" style="display:none; padding:var(--space-md);">
+              <div class="conn-badge">
+                <span class="conn-badge-icon">✅</span>
+                <div class="conn-info">
+                  <div class="title">Connecté à MyRenault</div>
+                  <div class="sub">Mode réel actif</div>
+                </div>
+                <button class="disconnect-btn" onclick="toggleConnect()">Déconnecter</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Mode simulation -->
+          <div class="form-section">
+            <div class="form-section-header">Mode simulation</div>
+            <div class="form-row">
+              <label>Activer le mode simulation</label>
+              <label class="toggle">
+                <input type="checkbox" checked onchange="toggleSim(this)" />
+                <div class="toggle-track"></div>
+                <div class="toggle-thumb"></div>
+              </label>
+            </div>
+            <div class="form-row" id="sim-scenario-row">
+              <label>Scénario</label>
+              <select style="background:transparent;border:none;color:var(--color-secondary);font-family:var(--font-family);font-size:15px;cursor:pointer;">
+                <option>Batterie 100 %</option>
+                <option selected>Batterie 80 %</option>
+                <option>Batterie 50 %</option>
+                <option>Batterie 20 %</option>
+                <option>Véhicule en charge</option>
+                <option>Véhicule non connecté</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Consommation -->
+          <div class="form-section">
+            <div class="form-section-header">Consommation</div>
+            <div class="form-row" style="flex-direction:column;align-items:stretch;gap:6px;">
+              <div style="display:flex;justify-content:space-between;">
+                <label>Consommation</label>
+                <span class="value" id="conso-val">170 Wh/km</span>
+              </div>
+              <input type="range" min="100" max="300" step="5" value="170"
+                     oninput="document.getElementById('conso-val').textContent=this.value+' Wh/km'"
+                     style="accent-color:var(--color-green)" />
+            </div>
+          </div>
+
+          <!-- Stratégie -->
+          <div class="form-section">
+            <div class="form-section-header">Stratégie de recharge</div>
+            <div class="form-row" style="flex-direction:column;align-items:stretch;gap:6px;">
+              <div style="display:flex;justify-content:space-between;">
+                <label>Batterie minimale à l'arrivée</label>
+                <span class="value" id="min-soc-val">15 %</span>
+              </div>
+              <input type="range" min="5" max="30" step="1" value="15"
+                     oninput="document.getElementById('min-soc-val').textContent=this.value+' %'"
+                     style="accent-color:var(--color-orange)" />
+            </div>
+            <div class="form-row" style="flex-direction:column;align-items:stretch;gap:6px;">
+              <div style="display:flex;justify-content:space-between;">
+                <label>SOC cible après recharge</label>
+                <span class="value" id="max-soc-val">80 %</span>
+              </div>
+              <input type="range" min="50" max="100" step="5" value="80"
+                     oninput="document.getElementById('max-soc-val').textContent=this.value+' %'"
+                     style="accent-color:var(--color-green)" />
+            </div>
+            <div class="form-row" style="flex-direction:column;align-items:stretch;gap:6px;">
+              <div style="display:flex;justify-content:space-between;">
+                <label>Marge de sécurité</label>
+                <span class="value" id="margin-val">10 %</span>
+              </div>
+              <input type="range" min="0" max="20" step="1" value="10"
+                     oninput="document.getElementById('margin-val').textContent=this.value+' %'"
+                     style="accent-color:var(--color-blue)" />
+            </div>
+          </div>
+
+          <!-- Véhicule -->
+          <div class="form-section">
+            <div class="form-section-header">Véhicule</div>
+            <div class="form-row"><label>Modèle</label><span class="value">ZE50 R110</span></div>
+            <div class="form-row"><label>Batterie utilisable</label><span class="value">50 kWh</span></div>
+          </div>
+
+          <button class="btn-primary green">💾 Enregistrer les réglages</button>
+        </div>
+
+        <div class="tab-bar">
+          <div class="tab-item"><span class="tab-icon">🚗</span><span class="tab-label">Accueil</span></div>
+          <div class="tab-item"><span class="tab-icon">🗺️</span><span class="tab-label">Trajet</span></div>
+          <div class="tab-item"><span class="tab-icon">⚡</span><span class="tab-label">Recharge</span></div>
+          <div class="tab-item active"><span class="tab-icon">⚙️</span><span class="tab-label">Réglages</span></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /flex-row iPhone -->
+
+  <hr class="section-divider" />
+
+  <!-- ══════════════════════════════════════════════════════════
+       INTERFACE CARPLAY
+  ══════════════════════════════════════════════════════════════ -->
+  <div class="section-header" id="carplay">
+    <h2>🚗 Interface CarPlay</h2>
+  </div>
+
+  <!-- CarPlay — Trajet sans recharge (Lyon → Genève) -->
+  <div class="carplay-outer">
+    <span class="phone-label">CarPlay — Lyon → Genève (aucune recharge)</span>
+    <div class="carplay-frame">
+      <div class="cp-header">
+        <span class="cp-app-icon">⚡</span>
+        <span class="cp-app-name">ZOE CarPlay Planner</span>
+        <span class="cp-time" id="cp-clock">00:00</span>
+      </div>
+      <div class="cp-body">
+        <div class="cp-main">
+          <div>
+            <div class="cp-soc-row">
+              <span class="cp-soc-val">82</span>
+              <span class="cp-soc-unit">%</span>
+            </div>
+            <div class="cp-range">Autonomie : 245 km</div>
+          </div>
+          <div>
+            <div class="cp-dest-label">Destination</div>
+            <div class="cp-dest-name">Genève</div>
+            <div class="cp-dist">150 km</div>
+          </div>
+          <div>
+            <div class="cp-arrival-label">Batterie à l'arrivée (estimation)</div>
+            <div class="cp-arrival-val">25 %</div>
+          </div>
+        </div>
+        <div class="cp-sidebar">
+          <div class="cp-list-item active">
+            <div class="cp-list-title">ZOE — 82 %</div>
+            <div class="cp-list-sub">245 km disponibles</div>
+          </div>
+          <div class="cp-list-item">
+            <div class="cp-list-title">Destination</div>
+            <div class="cp-list-sub">Appuyer pour planifier</div>
+          </div>
+          <div class="cp-list-item">
+            <div class="cp-list-title">✅ Recharge</div>
+            <div class="cp-list-sub">Aucune recharge nécessaire</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CarPlay — Trajet avec recharges (Lyon → Paris) -->
+  <div class="carplay-outer" style="margin-top:24px;">
+    <span class="phone-label">CarPlay — Lyon → Paris (2 recharges)</span>
+    <div class="carplay-frame">
+      <div class="cp-header">
+        <span class="cp-app-icon">⚡</span>
+        <span class="cp-app-name">ZOE CarPlay Planner</span>
+        <span class="cp-time" id="cp-clock2">00:00</span>
+      </div>
+      <div class="cp-body">
+        <div class="cp-main">
+          <div>
+            <div class="cp-soc-row">
+              <span class="cp-soc-val">100</span>
+              <span class="cp-soc-unit">%</span>
+            </div>
+            <div class="cp-range">Autonomie : 298 km</div>
+          </div>
+          <div>
+            <div class="cp-dest-label">Destination</div>
+            <div class="cp-dest-name">Paris</div>
+            <div class="cp-dist">465 km — 2 recharges</div>
+          </div>
+          <div>
+            <div class="cp-arrival-label">Batterie à l'arrivée (estimation)</div>
+            <div class="cp-arrival-val" style="color:var(--color-orange)">22 %</div>
+          </div>
+        </div>
+        <div class="cp-sidebar">
+          <div class="cp-list-item active">
+            <div class="cp-list-title">ZOE — 100 %</div>
+            <div class="cp-list-sub">298 km disponibles</div>
+          </div>
+          <div class="cp-list-item">
+            <div class="cp-list-title">⚡ Recharge 1</div>
+            <div class="cp-list-sub">172 km · 18 % → 75 %</div>
+          </div>
+          <div class="cp-list-item">
+            <div class="cp-list-title">⚡ Recharge 2</div>
+            <div class="cp-list-sub">340 km · 21 % → 75 %</div>
+          </div>
+          <div class="cp-list-item">
+            <div class="cp-list-title">🏁 Paris</div>
+            <div class="cp-list-sub">Arrivée ≈ 22 %</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="section-divider" />
+
+  <!-- ══════════════════════════════════════════════════════════
+       DESIGN SYSTEM — TOKENS
+  ══════════════════════════════════════════════════════════════ -->
+  <div class="section-header" id="tokens">
+    <h2>🎨 Design System</h2>
+  </div>
+
+  <div style="max-width:860px; width:100%;">
+    <p class="text-secondary" style="margin-bottom:var(--space-md); font-size:14px;">
+      Variables CSS globales reproduisant le style SwiftUI iOS — utilisables dans toute l'application web.
+    </p>
+
+    <!-- Couleurs -->
+    <p class="text-headline" style="margin-bottom:10px;">Couleurs</p>
+    <div class="tokens-grid" style="margin-bottom:var(--space-lg);">
+      <div class="token-swatch">
+        <div class="token-color" style="background:var(--color-green)"></div>
+        <div class="token-name">--color-green</div>
+        <div class="token-value">#30d158</div>
+      </div>
+      <div class="token-swatch">
+        <div class="token-color" style="background:var(--color-blue)"></div>
+        <div class="token-name">--color-blue</div>
+        <div class="token-value">#0a84ff</div>
+      </div>
+      <div class="token-swatch">
+        <div class="token-color" style="background:var(--color-orange)"></div>
+        <div class="token-name">--color-orange</div>
+        <div class="token-value">#ff9f0a</div>
+      </div>
+      <div class="token-swatch">
+        <div class="token-color" style="background:var(--color-red)"></div>
+        <div class="token-name">--color-red</div>
+        <div class="token-value">#ff453a</div>
+      </div>
+      <div class="token-swatch">
+        <div class="token-color" style="background:var(--color-carplay-accent)"></div>
+        <div class="token-name">--color-carplay-accent</div>
+        <div class="token-value">#00d4aa</div>
+      </div>
+      <div class="token-swatch">
+        <div class="token-color" style="background:var(--color-bg-secondary); border:1px solid var(--color-border)"></div>
+        <div class="token-name">--color-bg-secondary</div>
+        <div class="token-value">#1c1c1e</div>
+      </div>
+    </div>
+
+    <!-- Typographie -->
+    <p class="text-headline" style="margin-bottom:10px;">Typographie</p>
+    <div class="card card-sm" style="margin-bottom:var(--space-lg);">
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div><span class="text-large-title">Large Title — 34px bold</span></div>
+        <div><span class="text-title1">Title 1 — 28px bold</span></div>
+        <div><span class="text-title2">Title 2 — 22px bold</span></div>
+        <div><span class="text-headline">Headline — 17px semibold</span></div>
+        <div><span class="text-body">Body — 17px regular</span></div>
+        <div><span class="text-subheadline">Subheadline — 15px regular</span></div>
+        <div><span class="text-caption">Caption — 12px · couleur secondaire</span></div>
+        <div><span class="text-caption2">Caption 2 — 11px · couleur tertiaire</span></div>
+      </div>
+    </div>
+
+    <!-- Composants -->
+    <p class="text-headline" style="margin-bottom:10px;">Composants</p>
+    <div style="display:flex;flex-wrap:wrap;gap:var(--space-md);">
+      <button class="btn-primary" style="width:auto;padding:12px 24px;">Bouton principal</button>
+      <button class="btn-primary green" style="width:auto;padding:12px 24px;">Bouton vert</button>
+      <span class="sim-badge">Badge simulation</span>
+      <span class="sim-badge" style="background:rgba(10,132,255,.12);color:var(--color-blue);">Badge info</span>
+      <span class="sim-badge" style="background:rgba(48,209,88,.12);color:var(--color-green);">Badge succès</span>
+    </div>
+  </div>
+
+</main>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     JAVASCRIPT — Interactivité
+════════════════════════════════════════════════════════════════ -->
+<script>
+  // ── Horloge CarPlay ──────────────────────────────────────────
+  function updateClocks() {
+    const now = new Date();
+    const t = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    document.getElementById('cp-clock').textContent  = t;
+    document.getElementById('cp-clock2').textContent = t;
+  }
+  updateClocks();
+  setInterval(updateClocks, 30000);
+
+  // ── Sélection destination ────────────────────────────────────
+  const destData = {
+    'Genève':    { dist: '150 km', dur: '1 h 45', stops: 0 },
+    'Paris':     { dist: '465 km', dur: '4 h 50', stops: 2 },
+    'Marseille': { dist: '310 km', dur: '3 h 15', stops: 1 },
+    'Bordeaux':  { dist: '555 km', dur: '5 h 50', stops: 3 },
+  };
+
+  function selectDest(el, name, dist) {
+    // Reset all
+    document.querySelectorAll('.dest-item').forEach(d => {
+      d.classList.remove('selected');
+      d.querySelector('.dest-check').style.opacity = '0';
+    });
+    // Select
+    el.classList.add('selected');
+    el.querySelector('.dest-check').style.opacity = '1';
+    // Update result
+    const d = destData[name];
+    if (d) {
+      document.getElementById('res-dist').textContent = d.dist;
+    }
+  }
+
+  function calculateRoute() {
+    const selected = document.querySelector('.dest-item.selected .dest-name');
+    if (!selected) return;
+    const name = selected.textContent;
+    const d = destData[name] || {};
+    const btn = document.querySelector('[onclick="calculateRoute()"]');
+    btn.textContent = '⏳ Calcul…';
+    btn.disabled = true;
+    setTimeout(() => {
+      btn.innerHTML = '✅ Trajet calculé — ' + (d.dist || '?');
+      btn.disabled = false;
+      document.getElementById('route-result').style.borderColor = 'rgba(48,209,88,.3)';
+    }, 800);
+  }
+
+  // ── Toggle connexion Renault ─────────────────────────────────
+  let isConnected = false;
+  function toggleConnect() {
+    isConnected = !isConnected;
+    document.getElementById('login-form').style.display     = isConnected ? 'none' : 'block';
+    document.getElementById('connected-state').style.display = isConnected ? 'block' : 'none';
+  }
+
+  // ── Toggle simulation ────────────────────────────────────────
+  function toggleSim(checkbox) {
+    const row = document.getElementById('sim-scenario-row');
+    row.style.display = checkbox.checked ? 'flex' : 'none';
+  }
+</script>
+</body>
+</html>
