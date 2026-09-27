@@ -5,6 +5,43 @@ import CoreLocation
 
 /// Fournisseur de routage simulé — fonctionne sans clé API ni réseau.
 struct MockRoutingProvider: RoutingProvider {
+    func calculateRoute(
+        from origin: CLLocationCoordinate2D,
+        to destination: CLLocationCoordinate2D,
+        preferences: RoutePreferences
+    ) async throws -> Route {
+        var distanceKm = haversineDistanceKm(from: origin, to: destination) * 1.3
+
+        if preferences.avoidHighways {
+            distanceKm *= 1.15
+        } else if preferences.preferHighways {
+            distanceKm *= 0.95
+        }
+
+        if preferences.avoidTolls {
+            distanceKm *= 1.05
+        }
+
+        let durationMinutes = distanceKm / 90.0 * 60.0
+
+        return Route(
+            origin: RoutePoint(
+                name: "Départ",
+                coordinate: origin,
+                distanceFromOriginKm: 0
+            ),
+            destination: RoutePoint(
+                name: "Destination",
+                coordinate: destination,
+                distanceFromOriginKm: distanceKm
+            ),
+            totalDistanceKm: distanceKm,
+            estimatedDurationMinutes: durationMinutes,
+            waypoints: [],
+            roadType: .typical,
+            routePreferences: preferences
+        )
+    }
 
     func calculateRoute(
         from origin: CLLocationCoordinate2D,

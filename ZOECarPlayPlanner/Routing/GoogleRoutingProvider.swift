@@ -9,6 +9,10 @@ import CoreLocation
 ///
 /// Pour activer : définir la clé dans Config.swift (jamais dans le dépôt Git).
 struct GoogleRoutingProvider: RoutingProvider {
+    func calculateRoute(from origin: CLLocationCoordinate2D, to destination: CLLocationCoordinate2D, preferences: RoutePreferences) async throws -> Route {
+        return try await calculateRoute(from: origin, to: destination)
+    }
+    
     private let apiKey: String
 
     init(apiKey: String) {

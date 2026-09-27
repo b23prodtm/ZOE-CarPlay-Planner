@@ -7,6 +7,55 @@ import MapKit
 /// Fournisseur de routage utilisant MapKit (MKDirections).
 /// Priorité 1 — fonctionne sans clé API externe.
 struct AppleRoutingProvider: RoutingProvider {
+    func calculateRoute(
+        from origin: CLLocationCoordinate2D,
+        to destination: CLLocationCoordinate2D,
+        preferences: RoutePreferences
+    ) async throws -> Route {
+        let request = MKDirections.Request()
+        request.source = MKMapItem(placemark: MKPlacemark(coordinate: origin))
+        request.destination = MKMapItem(placemark: MKPlacemark(coordinate: destination))
+        request.transportType = .automobile
+
+        if preferences.avoidHighways || preferences.avoidTolls {
+            request.requestsAlternateRoutes = true
+        }
+
+        let directions = MKDirections(request: request)
+
+        do {
+            let response = try await directions.calculate()
+            guard let mkRoute = response.routes.first else {
+                throw RoutingError.noRouteFound
+            }
+
+            let distanceKm = mkRoute.distance / 1000.0
+            let durationMin = mkRoute.expectedTravelTime / 60.0
+
+            return Route(
+                origin: RoutePoint(
+                    name: "Départ",
+                    coordinate: origin,
+                    distanceFromOriginKm: 0
+                ),
+                destination: RoutePoint(
+                    name: "Destination",
+                    coordinate: destination,
+                    distanceFromOriginKm: distanceKm
+                ),
+                totalDistanceKm: distanceKm,
+                estimatedDurationMinutes: durationMin,
+                waypoints: [],
+                roadType: roadTypeDistribution(for: mkRoute),
+                routePreferences: preferences
+            )
+        } catch let error as RoutingError {
+            throw error
+        } catch {
+            throw RoutingError.networkError(underlying: error)
+        }
+    }
+    
 
     func calculateRoute(
         from origin: CLLocationCoordinate2D,

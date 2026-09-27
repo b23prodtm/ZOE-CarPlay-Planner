@@ -18,6 +18,7 @@ struct SettingsView: View {
                 simulationSection
                 consumptionSection
                 chargingStrategySection
+                routePreferencesSection
                 vehicleSection
                 saveSection
             }
@@ -82,7 +83,23 @@ struct SettingsView: View {
                       range: 0...20, tint: .blue)
         }
     }
+    
+    @ViewBuilder private var routePreferencesSection: some View {
+        Section("Préférences de trajet") {
+            Toggle("Éviter les autoroutes", isOn: $appState.settings.routePreferences.avoidHighways)
+                .tint(.orange)
 
+            Toggle("Éviter les péages", isOn: $appState.settings.routePreferences.avoidTolls)
+                .tint(.orange)
+
+            Toggle("Préférer les autoroutes", isOn: $appState.settings.routePreferences.preferHighways)
+                .tint(.green)
+
+            Toggle("Préférer les routes pittoresques", isOn: $appState.settings.routePreferences.preferScenic)
+                .tint(.purple)
+        }
+    }
+    
     @ViewBuilder private var vehicleSection: some View {
         Section("Véhicule") {
             HStack {

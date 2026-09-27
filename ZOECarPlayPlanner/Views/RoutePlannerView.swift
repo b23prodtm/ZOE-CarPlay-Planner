@@ -60,6 +60,23 @@ struct RoutePlannerView: View {
                         LabeledContent("Durée estimée", value: "\(Int(route.estimatedDurationMinutes)) min")
                     }
                 }
+                
+                if appState.settings.routePreferences != RoutePreferences() {
+                    Section("Préférences actives") {
+                        if appState.settings.routePreferences.avoidHighways {
+                            Label("Évite les autoroutes", systemImage: "road.lanes")
+                        }
+                        if appState.settings.routePreferences.avoidTolls {
+                            Label("Évite les péages", systemImage: "dollarsign.circle")
+                        }
+                        if appState.settings.routePreferences.preferHighways {
+                            Label("Préfère les autoroutes", systemImage: "speedometer")
+                        }
+                        if appState.settings.routePreferences.preferScenic {
+                            Label("Préfère les routes pittoresques", systemImage: "mountain.2")
+                        }
+                    }
+                }
             }
             .navigationTitle("Planifier un trajet")
         }

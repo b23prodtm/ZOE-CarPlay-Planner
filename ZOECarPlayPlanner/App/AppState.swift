@@ -94,7 +94,11 @@ final class AppState: ObservableObject {
         defer { isLoading = false }
         error = nil
         do {
-            let route = try await routingProvider.calculateRoute(from: origin, to: destination)
+            let route = try await routingProvider.calculateRoute(
+                from: origin,
+                to: destination,
+                preferences: settings.routePreferences
+            )
             currentRoute = route
 
             let stations = try await stationProvider.findStations(

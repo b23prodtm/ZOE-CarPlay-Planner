@@ -12,6 +12,7 @@
 		1376157444B94B0B9FF7BA0A /* ChargingStrategy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BC2CD6EABA842D180EBB18E /* ChargingStrategy.swift */; };
 		16C4953CADB9407AB606D58E /* ZOECarPlayPlannerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7AAD342BE2F47539D86EFFD /* ZOECarPlayPlannerApp.swift */; };
 		18A0F56DDFC7474184FE9443 /* AppError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5682DE2638714F578BB3D70E /* AppError.swift */; };
+		19B8D178306952C400D527CC /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 19B8D177306952C400D527CC /* Assets.xcassets */; };
 		1C68655ECF3D4538A1865460 /* CarPlaySceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9E0C2B2713E4BF189BA45BF /* CarPlaySceneDelegate.swift */; };
 		24366A8298B84C1C8C7B5EEF /* MockVehicleServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CCFF37B41FC489FB506B6CF /* MockVehicleServiceTests.swift */; };
 		2A9C137F21794FEEA33539B2 /* Route.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4124CE0B11044118607DD3B /* Route.swift */; };
@@ -62,6 +63,7 @@
 		134C66DF85854CABBAA0FD35 /* ChargingPlannerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChargingPlannerTests.swift; sourceTree = "<group>"; };
 		14716D529A474E468882A093 /* RoutePlannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutePlannerView.swift; sourceTree = "<group>"; };
 		15B491D6A84249B98FC7B8BF /* MockRoutingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockRoutingTests.swift; sourceTree = "<group>"; };
+		19B8D177306952C400D527CC /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		24A76E3C9C4C4F368B7DDD89 /* ChargingPlanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChargingPlanner.swift; sourceTree = "<group>"; };
 		2CA4B652F04948B992C5C3AF /* VehicleServiceProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehicleServiceProtocol.swift; sourceTree = "<group>"; };
 		2CCFF37B41FC489FB506B6CF /* MockVehicleServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockVehicleServiceTests.swift; sourceTree = "<group>"; };
@@ -222,6 +224,7 @@
 		D6B7EAC39E744EC8AE443EB6 = {
 			isa = PBXGroup;
 			children = (
+				19B8D177306952C400D527CC /* Assets.xcassets */,
 				BA16EE8562784A7C8CE9E5C2 /* App */,
 				ECA489666CB441BE90AA5448 /* Models */,
 				92012F886BE64E8F8C8DE280 /* Services */,
@@ -334,6 +337,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				19B8D178306952C400D527CC /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
