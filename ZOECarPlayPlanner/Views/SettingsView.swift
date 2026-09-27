@@ -38,6 +38,9 @@ struct SettingsView: View {
                 guard let newValue else { return }
                 Task { await persistWallpaper(from: newValue) }
             }
+            .onChange(of: appState.settings.preferredNavigationApp) { _, _ in
+                appState.settings.save()
+            }
         }
     }
 
@@ -150,55 +153,55 @@ struct SettingsView: View {
                     .foregroundStyle(.secondary)
             }
         }
+    }
 
-        @ViewBuilder private var chargingFilterSection: some View {
-            Section("Filtres de recharge par défaut") {
-                ForEach(ChargingNetwork.allCases, id: \.self) { network in
-                    Toggle(network.displayName, isOn: networkBinding(for: network))
-                        .tint(.green)
-                }
+    @ViewBuilder private var chargingFilterSection: some View {
+        Section("Filtres de recharge par défaut") {
+            ForEach(ChargingNetwork.allCases, id: \.self) { network in
+                Toggle(network.displayName, isOn: networkBinding(for: network))
+                    .tint(.green)
+            }
 
-                ForEach(ConnectorType.allCases, id: \.self) { connector in
-                    Toggle(connector.displayName, isOn: connectorBinding(for: connector))
-                        .tint(.blue)
-                }
+            ForEach(ConnectorType.allCases, id: \.self) { connector in
+                Toggle(connector.displayName, isOn: connectorBinding(for: connector))
+                    .tint(.blue)
             }
         }
+    }
 
-        @ViewBuilder private var navigationSection: some View {
-            Section("Navigation externe") {
-                Picker("Application préférée", selection: $appState.settings.preferredNavigationApp) {
-                    ForEach(PreferredNavigationApp.allCases, id: \.self) { app in
-                        Text(navigationLabel(for: app)).tag(app)
-                    }
+    @ViewBuilder private var navigationSection: some View {
+        Section("Navigation externe") {
+            Picker("Application préférée", selection: $appState.settings.preferredNavigationApp) {
+                ForEach(availableNavigationChoices, id: \.self) { app in
+                    Text(app.displayName).tag(app)
                 }
-
-                Text("L’application choisie sera utilisée si elle est installée, sinon l’app basculera automatiquement sur Apple Plans.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
             }
+
+            Text("L’application choisie sera utilisée si elle est installée, sinon l’app basculera automatiquement sur Apple Plans.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
+    }
 
-        @ViewBuilder private var wallpaperSection: some View {
-            Section("Fond d’écran d’accueil") {
-                PhotosPicker(selection: $selectedWallpaperItem, matching: .images) {
-                    Label("Choisir une image", systemImage: "photo.on.rectangle")
-                }
-
-                if appState.settings.dashboardWallpaperFilename != nil {
-                    Button(role: .destructive) {
-                        DashboardWallpaperStore.deleteImage(named: appState.settings.dashboardWallpaperFilename)
-                        appState.settings.dashboardWallpaperFilename = nil
-                        appState.settings.save()
-                    } label: {
-                        Label("Supprimer le fond personnalisé", systemImage: "trash")
-                    }
-                }
-
-                Text("L’image est stockée localement sur l’iPhone. Si aucune image n’est choisie, le visuel par défaut est utilisé.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+    @ViewBuilder private var wallpaperSection: some View {
+        Section("Fond d’écran d’accueil") {
+            PhotosPicker(selection: $selectedWallpaperItem, matching: .images) {
+                Label("Choisir une image", systemImage: "photo.on.rectangle")
             }
+
+            if appState.settings.dashboardWallpaperFilename != nil {
+                Button(role: .destructive) {
+                    DashboardWallpaperStore.deleteImage(named: appState.settings.dashboardWallpaperFilename)
+                    appState.settings.dashboardWallpaperFilename = nil
+                    appState.settings.save()
+                } label: {
+                    Label("Supprimer le fond personnalisé", systemImage: "trash")
+                }
+            }
+
+            Text("L’image est stockée localement sur l’iPhone. Si aucune image n’est choisie, le visuel par défaut est utilisé.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
     }
 
@@ -331,11 +334,9 @@ struct SettingsView: View {
         }
     }
 
-    private func navigationLabel(for app: PreferredNavigationApp) -> String {
-        if appState.availableNavigationApps.contains(app) {
-            return app.displayName
-        }
-        return "\(app.displayName) (indisponible)"
+    private var availableNavigationChoices: [PreferredNavigationApp] {
+        let apps = appState.availableNavigationApps
+        return apps.isEmpty ? [.appleMaps] : apps
     }
 
     private func networkBinding(for network: ChargingNetwork) -> Binding<Bool> {

@@ -26,6 +26,7 @@ struct MockChargingStationProvider: ChargingStationProvider {
         var stations: [ChargingStation] = []
         let totalKm = route.totalDistanceKm
         var distanceMark = 80.0
+        var generatedIndex = 0
         let preferHighwayNetwork = !route.routePreferences.avoidHighways
         let availableNetworks: [ChargingNetwork] = preferHighwayNetwork
             ? [.ionity, .electra, .totalEnergies, .fastned]
@@ -38,10 +39,10 @@ struct MockChargingStationProvider: ChargingStationProvider {
             let lon = route.origin.coordinate.longitude
                     + fraction * (route.destination.coordinate.longitude - route.origin.coordinate.longitude)
 
-            let network = availableNetworks[stations.count % availableNetworks.count]
+            let network = availableNetworks[generatedIndex % availableNetworks.count]
             let stationName = preferHighwayNetwork
-                ? "Aire autoroute \(network.displayName) #\(stations.count + 1)"
-                : "Borne \(network.displayName) #\(stations.count + 1)"
+                ? "Aire autoroute \(network.displayName) #\(generatedIndex + 1)"
+                : "Borne \(network.displayName) #\(generatedIndex + 1)"
 
             let station = ChargingStation(
                 id: UUID(),
@@ -61,6 +62,7 @@ struct MockChargingStationProvider: ChargingStationProvider {
             if networkMatches && connectorMatches {
                 stations.append(station)
             }
+            generatedIndex += 1
             distanceMark += 80
         }
         return stations

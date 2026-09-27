@@ -128,9 +128,7 @@ enum DashboardWallpaperStore {
 
     static func saveImageData(_ data: Data) throws -> String {
         let image = UIImage(data: data)
-        guard let jpegData = image?.jpegData(compressionQuality: 0.9) ?? data as Data? else {
-            throw CocoaError(.fileWriteUnknown)
-        }
+        let jpegData = image?.jpegData(compressionQuality: 0.9) ?? data
 
         let directory = try makeDirectoryIfNeeded()
         let filename = "wallpaper.jpg"
