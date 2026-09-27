@@ -23,7 +23,7 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
     ) {
         self.interfaceController = interfaceController
         coordinator = CarPlayCoordinator(interfaceController: interfaceController)
-        coordinator?.showMainTemplate()
+        coordinator?.showRootTemplate()
     }
 
     func templateApplicationScene(
