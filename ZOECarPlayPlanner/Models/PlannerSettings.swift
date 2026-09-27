@@ -16,6 +16,7 @@ final class PlannerSettings: ObservableObject, Codable {
     @Published var routePreferences: RoutePreferences
     @Published var selectedChargingNetworks: [ChargingNetwork]
     @Published var selectedConnectorTypes: [ConnectorType]
+    @Published var preferHighwayStations: Bool
     @Published var preferredNavigationApp: PreferredNavigationApp
     @Published var dashboardWallpaperFilename: String?
 
@@ -31,6 +32,7 @@ final class PlannerSettings: ObservableObject, Codable {
         routePreferences: RoutePreferences = .init(),
         selectedChargingNetworks: [ChargingNetwork] = ChargingNetwork.allCases,
         selectedConnectorTypes: [ConnectorType] = [.type2AC, .ccs],
+        preferHighwayStations: Bool = true,
         preferredNavigationApp: PreferredNavigationApp = .appleMaps,
         dashboardWallpaperFilename: String? = nil
     ) {
@@ -45,6 +47,7 @@ final class PlannerSettings: ObservableObject, Codable {
         self.routePreferences = routePreferences
         self.selectedChargingNetworks = selectedChargingNetworks
         self.selectedConnectorTypes = selectedConnectorTypes
+        self.preferHighwayStations = preferHighwayStations
         self.preferredNavigationApp = preferredNavigationApp
         self.dashboardWallpaperFilename = dashboardWallpaperFilename
     }
@@ -55,7 +58,7 @@ final class PlannerSettings: ObservableObject, Codable {
         case consumptionWhPerKm, minBatteryAtArrivalPercent, maxBatteryAfterChargePercent
         case safetyMarginPercent, preferredChargingPowerKW, useSimulationMode
         case simulatedSOCPercent, vehicle, routePreferences, selectedChargingNetworks
-        case selectedConnectorTypes, preferredNavigationApp, dashboardWallpaperFilename
+        case selectedConnectorTypes, preferHighwayStations, preferredNavigationApp, dashboardWallpaperFilename
     }
 
     required init(from decoder: Decoder) throws {
@@ -71,6 +74,7 @@ final class PlannerSettings: ObservableObject, Codable {
         routePreferences = try c.decodeIfPresent(RoutePreferences.self, forKey: .routePreferences) ?? .init()
         selectedChargingNetworks = try c.decodeIfPresent([ChargingNetwork].self, forKey: .selectedChargingNetworks) ?? ChargingNetwork.allCases
         selectedConnectorTypes = try c.decodeIfPresent([ConnectorType].self, forKey: .selectedConnectorTypes) ?? [.type2AC, .ccs]
+        preferHighwayStations = try c.decodeIfPresent(Bool.self, forKey: .preferHighwayStations) ?? true
         preferredNavigationApp = try c.decodeIfPresent(PreferredNavigationApp.self, forKey: .preferredNavigationApp) ?? .appleMaps
         dashboardWallpaperFilename = try c.decodeIfPresent(String.self, forKey: .dashboardWallpaperFilename)
     }
@@ -88,6 +92,7 @@ final class PlannerSettings: ObservableObject, Codable {
         try c.encode(routePreferences, forKey: .routePreferences)
         try c.encode(selectedChargingNetworks, forKey: .selectedChargingNetworks)
         try c.encode(selectedConnectorTypes, forKey: .selectedConnectorTypes)
+        try c.encode(preferHighwayStations, forKey: .preferHighwayStations)
         try c.encode(preferredNavigationApp, forKey: .preferredNavigationApp)
         try c.encodeIfPresent(dashboardWallpaperFilename, forKey: .dashboardWallpaperFilename)
     }

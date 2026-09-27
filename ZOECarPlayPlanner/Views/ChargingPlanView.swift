@@ -41,6 +41,16 @@ struct ChargingPlanView: View {
                     LabeledContent("Temps de recharge estimé", value: "≈ \(Int(plan.totalExtraTimeMinutes)) min")
                 }
 
+                Picker("Alternative", selection: Binding(
+                    get: { appState.chargingStationSelectionPreference },
+                    set: { appState.recalculateChargingStops(preference: $0) }
+                )) {
+                    ForEach(ChargingStationSelectionPreference.allCases, id: \.self) { preference in
+                        Text(preference.label).tag(preference)
+                    }
+                }
+                .pickerStyle(.segmented)
+
                 Button {
                     if !appState.openCurrentTripInPreferredNavigationApp(includeChargingStops: true) {
                         showNavigationError = true

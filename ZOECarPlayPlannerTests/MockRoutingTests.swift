@@ -375,6 +375,7 @@ final class MockRoutingTests: XCTestCase {
 
         XCTAssertEqual(settings.selectedChargingNetworks, ChargingNetwork.allCases)
         XCTAssertEqual(settings.selectedConnectorTypes, [.type2AC, .ccs])
+        XCTAssertTrue(settings.preferHighwayStations)
         XCTAssertEqual(settings.preferredNavigationApp, .appleMaps)
         XCTAssertNil(settings.dashboardWallpaperFilename)
     }

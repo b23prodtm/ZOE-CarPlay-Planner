@@ -12,6 +12,25 @@ struct ChargingPlannerInput: Sendable {
     let chargingPowerKW: Double
     let availableStations: [ChargingStation]
     let roadTypes: RoadTypeDistribution
+    let preferHighwayStations: Bool
+    let stationSelectionPreference: ChargingStationSelectionPreference
+}
+
+enum ChargingStationSelectionPreference: String, CaseIterable, Sendable {
+    case earlier
+    case balanced
+    case later
+
+    var label: String {
+        switch self {
+        case .earlier:
+            return "Plus tôt"
+        case .balanced:
+            return "Standard"
+        case .later:
+            return "Plus tard"
+        }
+    }
 }
 
 // MARK: - ChargingPlanner
@@ -65,8 +84,9 @@ struct ChargingPlanner: Sendable {
 
             let station = bestStation(
                 near: distanceAtStop,
-                routeLength: input.distanceKm,
-                stations: input.availableStations
+                stations: input.availableStations,
+                preferHighwayStations: input.preferHighwayStations,
+                selectionPreference: input.stationSelectionPreference
             )
 
             let stop = ChargingStop(
@@ -109,13 +129,58 @@ struct ChargingPlanner: Sendable {
 
     private func bestStation(
         near distanceKm: Double,
-        routeLength: Double,
-        stations: [ChargingStation]
+        stations: [ChargingStation],
+        preferHighwayStations: Bool,
+        selectionPreference: ChargingStationSelectionPreference
     ) -> ChargingStation? {
         // Priorité aux bornes proches de la distance cible, dans un rayon de 20 km
         stations
             .filter { abs($0.distanceFromRouteKm - distanceKm) < 20 }
-            .sorted { $0.maxPowerKW > $1.maxPowerKW }
+            .sorted {
+                compareStations(
+                    lhs: $0,
+                    rhs: $1,
+                    targetDistance: distanceKm,
+                    preferHighwayStations: preferHighwayStations,
+                    selectionPreference: selectionPreference
+                )
+            }
             .first
+    }
+
+    private func compareStations(
+        lhs: ChargingStation,
+        rhs: ChargingStation,
+        targetDistance: Double,
+        preferHighwayStations: Bool,
+        selectionPreference: ChargingStationSelectionPreference
+    ) -> Bool {
+        let lhsDelta = lhs.distanceFromRouteKm - targetDistance
+        let rhsDelta = rhs.distanceFromRouteKm - targetDistance
+
+        switch selectionPreference {
+        case .earlier:
+            let lhsEarlier = lhsDelta <= 0
+            let rhsEarlier = rhsDelta <= 0
+            if lhsEarlier != rhsEarlier { return lhsEarlier }
+            if abs(lhsDelta) != abs(rhsDelta) { return abs(lhsDelta) < abs(rhsDelta) }
+        case .later:
+            let lhsLater = lhsDelta >= 0
+            let rhsLater = rhsDelta >= 0
+            if lhsLater != rhsLater { return lhsLater }
+            if abs(lhsDelta) != abs(rhsDelta) { return abs(lhsDelta) < abs(rhsDelta) }
+        case .balanced:
+            if abs(lhsDelta) != abs(rhsDelta) { return abs(lhsDelta) < abs(rhsDelta) }
+        }
+
+        if preferHighwayStations, lhs.isHighway != rhs.isHighway {
+            return lhs.isHighway == true
+        }
+
+        if lhs.maxPowerKW != rhs.maxPowerKW {
+            return lhs.maxPowerKW > rhs.maxPowerKW
+        }
+
+        return lhs.distanceFromRouteKm < rhs.distanceFromRouteKm
     }
 }

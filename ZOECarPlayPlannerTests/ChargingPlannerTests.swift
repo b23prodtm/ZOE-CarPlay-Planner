@@ -27,7 +27,9 @@ final class ChargingPlannerTests: XCTestCase {
             strategy: strategy ?? defaultStrategy,
             chargingPowerKW: chargingPower,
             availableStations: stations,
-            roadTypes: .typical
+            roadTypes: .typical,
+            preferHighwayStations: true,
+            stationSelectionPreference: .balanced
         )
     }
 
@@ -117,7 +119,9 @@ final class ChargingPlannerTests: XCTestCase {
             strategy: defaultStrategy,
             chargingPowerKW: chargingPower,
             availableStations: [],
-            roadTypes: .allHighway
+            roadTypes: .allHighway,
+            preferHighwayStations: true,
+            stationSelectionPreference: .balanced
         )
         let highInput = ChargingPlannerInput(
             currentSOCPercent: 80,
@@ -127,7 +131,9 @@ final class ChargingPlannerTests: XCTestCase {
             strategy: defaultStrategy,
             chargingPowerKW: chargingPower,
             availableStations: [],
-            roadTypes: .allHighway
+            roadTypes: .allHighway,
+            preferHighwayStations: true,
+            stationSelectionPreference: .balanced
         )
         let planLow = planner.plan(input: lowInput)
         let planHigh = planner.plan(input: highInput)
@@ -158,5 +164,97 @@ final class ChargingPlannerTests: XCTestCase {
             XCTAssertGreaterThan(stop.estimatedChargeDurationMinutes, 0)
             XCTAssertGreaterThan(stop.energyToAddKWh, 0)
         }
+    }
+
+    func test_preferHighwayStations_prioritizesHighwayArea() {
+        let targetStopDistance = 162.0
+        let highwayStation = ChargingStation(
+            id: UUID(),
+            name: "Aire autoroute",
+            coordinate: .init(latitude: 45.0, longitude: 4.0),
+            network: .ionity,
+            connectors: [StationConnector(id: UUID(), type: .ccs, powerKW: 250, isAvailable: true)],
+            isAvailable: true,
+            distanceFromRouteKm: 160,
+            isHighway: true
+        )
+        let cityStation = ChargingStation(
+            id: UUID(),
+            name: "Borne centre-ville",
+            coordinate: .init(latitude: 45.1, longitude: 4.1),
+            network: .electra,
+            connectors: [StationConnector(id: UUID(), type: .ccs, powerKW: 300, isAvailable: true)],
+            isAvailable: true,
+            distanceFromRouteKm: 161,
+            isHighway: false
+        )
+
+        let plan = planner.plan(input: ChargingPlannerInput(
+            currentSOCPercent: 80,
+            usableBatteryKWh: usableBattery,
+            consumptionWhPerKm: consumption,
+            distanceKm: 320,
+            strategy: defaultStrategy,
+            chargingPowerKW: chargingPower,
+            availableStations: [cityStation, highwayStation],
+            roadTypes: .allHighway,
+            preferHighwayStations: true,
+            stationSelectionPreference: .balanced
+        ))
+
+        XCTAssertEqual(plan.stops.first?.station?.name, highwayStation.name)
+        XCTAssertLessThan(abs((plan.stops.first?.distanceFromOriginKm ?? 0) - targetStopDistance), 20)
+    }
+
+    func test_stationSelectionPreference_canShiftEarlierOrLater() {
+        let earlierStation = ChargingStation(
+            id: UUID(),
+            name: "Borne plus tôt",
+            coordinate: .init(latitude: 45.0, longitude: 4.0),
+            network: .ionity,
+            connectors: [StationConnector(id: UUID(), type: .ccs, powerKW: 150, isAvailable: true)],
+            isAvailable: true,
+            distanceFromRouteKm: 150,
+            isHighway: true
+        )
+        let laterStation = ChargingStation(
+            id: UUID(),
+            name: "Borne plus tard",
+            coordinate: .init(latitude: 45.2, longitude: 4.2),
+            network: .ionity,
+            connectors: [StationConnector(id: UUID(), type: .ccs, powerKW: 150, isAvailable: true)],
+            isAvailable: true,
+            distanceFromRouteKm: 170,
+            isHighway: true
+        )
+
+        let earlierPlan = planner.plan(input: ChargingPlannerInput(
+            currentSOCPercent: 80,
+            usableBatteryKWh: usableBattery,
+            consumptionWhPerKm: consumption,
+            distanceKm: 320,
+            strategy: defaultStrategy,
+            chargingPowerKW: chargingPower,
+            availableStations: [earlierStation, laterStation],
+            roadTypes: .allHighway,
+            preferHighwayStations: true,
+            stationSelectionPreference: .earlier
+        ))
+
+        let laterPlan = planner.plan(input: ChargingPlannerInput(
+            currentSOCPercent: 80,
+            usableBatteryKWh: usableBattery,
+            consumptionWhPerKm: consumption,
+            distanceKm: 320,
+            strategy: defaultStrategy,
+            chargingPowerKW: chargingPower,
+            availableStations: [earlierStation, laterStation],
+            roadTypes: .allHighway,
+            preferHighwayStations: true,
+            stationSelectionPreference: .later
+        ))
+
+        XCTAssertEqual(earlierPlan.stops.first?.station?.name, earlierStation.name)
+        XCTAssertEqual(laterPlan.stops.first?.station?.name, laterStation.name)
     }
 }
