@@ -98,11 +98,29 @@ final class PlannerSettings: ObservableObject, Codable {
         }
     }
 
+    func setChargingNetwork(_ network: ChargingNetwork, isEnabled: Bool) {
+        updateSelection(&selectedChargingNetworks, value: network, isEnabled: isEnabled)
+    }
+
+    func setConnectorType(_ connector: ConnectorType, isEnabled: Bool) {
+        updateSelection(&selectedConnectorTypes, value: connector, isEnabled: isEnabled)
+    }
+
     static func load() -> PlannerSettings {
         guard let data = UserDefaults.standard.data(forKey: "PlannerSettings"),
               let settings = try? JSONDecoder().decode(PlannerSettings.self, from: data)
         else { return PlannerSettings() }
         return settings
+    }
+
+    private func updateSelection<T: Equatable>(_ collection: inout [T], value: T, isEnabled: Bool) {
+        if isEnabled {
+            if !collection.contains(value) {
+                collection.append(value)
+            }
+        } else if collection.count > 1 {
+            collection.removeAll { $0 == value }
+        }
     }
 }
 

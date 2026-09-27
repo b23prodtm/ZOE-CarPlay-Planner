@@ -125,7 +125,9 @@ struct RoutePlannerView: View {
             .onChange(of: selectedOrigin?.id) { _, _ in fitMapToContent() }
             .onChange(of: selectedDestination?.id) { _, _ in fitMapToContent() }
             .onChange(of: waypoints.map(\.id)) { _, _ in fitMapToContent() }
-            .onChange(of: appState.currentRoute?.path.count ?? 0) { _, _ in fitMapToContent() }
+            .onChange(of: appState.currentRoute?.path.map { "\($0.latitude),\($0.longitude)" } ?? []) { _, _ in
+                fitMapToContent()
+            }
             .onChange(of: appState.availableStationsOnRoute.map(\.id)) { _, _ in fitMapToContent() }
         }
     }
@@ -428,7 +430,7 @@ struct RoutePlannerView: View {
         Binding(
             get: { appState.settings.selectedChargingNetworks.contains(network) },
             set: { isEnabled in
-                updateSelection(&appState.settings.selectedChargingNetworks, value: network, isEnabled: isEnabled)
+                appState.settings.setChargingNetwork(network, isEnabled: isEnabled)
             }
         )
     }
@@ -437,19 +439,9 @@ struct RoutePlannerView: View {
         Binding(
             get: { appState.settings.selectedConnectorTypes.contains(connector) },
             set: { isEnabled in
-                updateSelection(&appState.settings.selectedConnectorTypes, value: connector, isEnabled: isEnabled)
+                appState.settings.setConnectorType(connector, isEnabled: isEnabled)
             }
         )
-    }
-
-    private func updateSelection<T: Equatable>(_ collection: inout [T], value: T, isEnabled: Bool) {
-        if isEnabled {
-            if !collection.contains(value) {
-                collection.append(value)
-            }
-        } else if collection.count > 1 {
-            collection.removeAll { $0 == value }
-        }
     }
 
     private func calculateRoute() async {
