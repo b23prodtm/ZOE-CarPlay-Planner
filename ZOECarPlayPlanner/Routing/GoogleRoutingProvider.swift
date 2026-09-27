@@ -9,6 +9,12 @@ import CoreLocation
 ///
 /// Pour activer : définir la clé dans Config.swift (jamais dans le dépôt Git).
 struct GoogleRoutingProvider: RoutingProvider {
+    func calculateRoute(from origin: CLLocationCoordinate2D, to destination: CLLocationCoordinate2D, preferences: RoutePreferences) async throws -> Route {
+        // TODO: brancher ces préférences sur Google Routes API lors de l'implémentation réelle.
+        let mock = MockRoutingProvider()
+        return try await mock.calculateRoute(from: origin, to: destination, preferences: preferences)
+    }
+    
     private let apiKey: String
 
     init(apiKey: String) {
@@ -25,6 +31,6 @@ struct GoogleRoutingProvider: RoutingProvider {
         //
         // Pour l'instant, déléguer au MockRoutingProvider en fallback.
         let mock = MockRoutingProvider()
-        return try await mock.calculateRoute(from: origin, to: destination)
+        return try await mock.calculateRoute(from: origin, to: destination, preferences: .init())
     }
 }

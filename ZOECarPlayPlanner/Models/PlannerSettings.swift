@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 
 // MARK: - PlannerSettings
 
@@ -12,6 +13,11 @@ final class PlannerSettings: ObservableObject, Codable {
     @Published var useSimulationMode: Bool
     @Published var simulatedSOCPercent: Double
     @Published var vehicle: Vehicle
+    @Published var routePreferences: RoutePreferences
+    @Published var selectedChargingNetworks: [ChargingNetwork]
+    @Published var selectedConnectorTypes: [ConnectorType]
+    @Published var preferredNavigationApp: PreferredNavigationApp
+    @Published var dashboardWallpaperFilename: String?
 
     init(
         consumptionWhPerKm: Double = 170,
@@ -21,7 +27,12 @@ final class PlannerSettings: ObservableObject, Codable {
         preferredChargingPowerKW: Double = 22,
         useSimulationMode: Bool = true,
         simulatedSOCPercent: Double = 82,
-        vehicle: Vehicle = .defaultZOE
+        vehicle: Vehicle = .defaultZOE,
+        routePreferences: RoutePreferences = .init(),
+        selectedChargingNetworks: [ChargingNetwork] = ChargingNetwork.allCases,
+        selectedConnectorTypes: [ConnectorType] = [.type2AC, .ccs],
+        preferredNavigationApp: PreferredNavigationApp = .appleMaps,
+        dashboardWallpaperFilename: String? = nil
     ) {
         self.consumptionWhPerKm = consumptionWhPerKm
         self.minBatteryAtArrivalPercent = minBatteryAtArrivalPercent
@@ -31,6 +42,11 @@ final class PlannerSettings: ObservableObject, Codable {
         self.useSimulationMode = useSimulationMode
         self.simulatedSOCPercent = simulatedSOCPercent
         self.vehicle = vehicle
+        self.routePreferences = routePreferences
+        self.selectedChargingNetworks = selectedChargingNetworks
+        self.selectedConnectorTypes = selectedConnectorTypes
+        self.preferredNavigationApp = preferredNavigationApp
+        self.dashboardWallpaperFilename = dashboardWallpaperFilename
     }
 
     // MARK: Codable
@@ -38,7 +54,8 @@ final class PlannerSettings: ObservableObject, Codable {
     enum CodingKeys: String, CodingKey {
         case consumptionWhPerKm, minBatteryAtArrivalPercent, maxBatteryAfterChargePercent
         case safetyMarginPercent, preferredChargingPowerKW, useSimulationMode
-        case simulatedSOCPercent, vehicle
+        case simulatedSOCPercent, vehicle, routePreferences, selectedChargingNetworks
+        case selectedConnectorTypes, preferredNavigationApp, dashboardWallpaperFilename
     }
 
     required init(from decoder: Decoder) throws {
@@ -51,6 +68,11 @@ final class PlannerSettings: ObservableObject, Codable {
         useSimulationMode = try c.decodeIfPresent(Bool.self, forKey: .useSimulationMode) ?? true
         simulatedSOCPercent = try c.decodeIfPresent(Double.self, forKey: .simulatedSOCPercent) ?? 82
         vehicle = try c.decodeIfPresent(Vehicle.self, forKey: .vehicle) ?? .defaultZOE
+        routePreferences = try c.decodeIfPresent(RoutePreferences.self, forKey: .routePreferences) ?? .init()
+        selectedChargingNetworks = try c.decodeIfPresent([ChargingNetwork].self, forKey: .selectedChargingNetworks) ?? ChargingNetwork.allCases
+        selectedConnectorTypes = try c.decodeIfPresent([ConnectorType].self, forKey: .selectedConnectorTypes) ?? [.type2AC, .ccs]
+        preferredNavigationApp = try c.decodeIfPresent(PreferredNavigationApp.self, forKey: .preferredNavigationApp) ?? .appleMaps
+        dashboardWallpaperFilename = try c.decodeIfPresent(String.self, forKey: .dashboardWallpaperFilename)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -63,6 +85,11 @@ final class PlannerSettings: ObservableObject, Codable {
         try c.encode(useSimulationMode, forKey: .useSimulationMode)
         try c.encode(simulatedSOCPercent, forKey: .simulatedSOCPercent)
         try c.encode(vehicle, forKey: .vehicle)
+        try c.encode(routePreferences, forKey: .routePreferences)
+        try c.encode(selectedChargingNetworks, forKey: .selectedChargingNetworks)
+        try c.encode(selectedConnectorTypes, forKey: .selectedConnectorTypes)
+        try c.encode(preferredNavigationApp, forKey: .preferredNavigationApp)
+        try c.encodeIfPresent(dashboardWallpaperFilename, forKey: .dashboardWallpaperFilename)
     }
 
     func save() {
@@ -71,10 +98,109 @@ final class PlannerSettings: ObservableObject, Codable {
         }
     }
 
+    func setChargingNetwork(_ network: ChargingNetwork, isEnabled: Bool) {
+        updateSelection(&selectedChargingNetworks, value: network, isEnabled: isEnabled)
+    }
+
+    func setConnectorType(_ connector: ConnectorType, isEnabled: Bool) {
+        updateSelection(&selectedConnectorTypes, value: connector, isEnabled: isEnabled)
+    }
+
     static func load() -> PlannerSettings {
         guard let data = UserDefaults.standard.data(forKey: "PlannerSettings"),
               let settings = try? JSONDecoder().decode(PlannerSettings.self, from: data)
         else { return PlannerSettings() }
         return settings
+    }
+
+    private func updateSelection<T: Equatable>(_ collection: inout [T], value: T, isEnabled: Bool) {
+        if isEnabled {
+            if !collection.contains(value) {
+                collection.append(value)
+            }
+        } else if collection.count > 1 {
+            collection.removeAll { $0 == value }
+        }
+    }
+}
+
+enum PreferredNavigationApp: String, Codable, CaseIterable, Sendable {
+    case appleMaps
+    case googleMaps
+    case waze
+    case roole
+
+    var displayName: String {
+        switch self {
+        case .appleMaps: return "Apple Plans"
+        case .googleMaps: return "Google Maps"
+        case .waze: return "Waze"
+        case .roole: return "Roole"
+        }
+    }
+}
+
+enum DashboardWallpaperStore {
+    nonisolated(unsafe) private static let fileManager = FileManager.default
+    private static let directoryName = "DashboardWallpaper"
+
+    static func saveImageData(_ data: Data) throws -> String {
+        guard let image = UIImage(data: data) else {
+            throw CocoaError(.fileReadCorruptFile)
+        }
+        let preparedImage = image.resizedForDashboard()
+        guard let jpegData = preparedImage.jpegData(compressionQuality: 0.82) else {
+            throw CocoaError(.fileWriteUnknown)
+        }
+
+        let directory = try makeDirectoryIfNeeded()
+        let filename = "wallpaper.jpg"
+        let url = directory.appendingPathComponent(filename)
+        try jpegData.write(to: url, options: [.atomic])
+        return filename
+    }
+
+    static func deleteImage(named filename: String?) {
+        guard let filename else { return }
+        let url = imageURL(for: filename)
+        try? fileManager.removeItem(at: url)
+    }
+
+    static func image(named filename: String?) -> UIImage? {
+        guard let filename else { return nil }
+        return UIImage(contentsOfFile: imageURL(for: filename).path)
+    }
+
+    private static func imageURL(for filename: String) -> URL {
+        let baseDirectory = (try? makeDirectoryIfNeeded()) ?? fileManager.temporaryDirectory
+        return baseDirectory.appendingPathComponent(filename)
+    }
+
+    private static func makeDirectoryIfNeeded() throws -> URL {
+        let baseDirectory = try fileManager.url(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask,
+            appropriateFor: nil,
+            create: true
+        )
+        let directory = baseDirectory.appendingPathComponent(directoryName, isDirectory: true)
+        if !fileManager.fileExists(atPath: directory.path) {
+            try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
+        }
+        return directory
+    }
+}
+
+private extension UIImage {
+    func resizedForDashboard(maxDimension: CGFloat = 1_600) -> UIImage {
+        let longestSide = max(size.width, size.height)
+        guard longestSide > maxDimension else { return self }
+
+        let scale = maxDimension / longestSide
+        let targetSize = CGSize(width: size.width * scale, height: size.height * scale)
+        let renderer = UIGraphicsImageRenderer(size: targetSize)
+        return renderer.image { _ in
+            draw(in: CGRect(origin: .zero, size: targetSize))
+        }
     }
 }

@@ -11,29 +11,25 @@ import Foundation
 //   3. POST Kamereon /persons/token → kamereonToken + accountId
 //   4. Toutes les requêtes API Renault utilisent le kamereonToken.
 //
+// La config serveur (endpoints + clés API Gigya/Kamereon) est récupérée
+// dynamiquement plutôt que codée en dur, car Renault fait tourner ces
+// clés sans préavis côté serveur (cf. historique hacf-fr/renault-api).
+// Source du endpoint de config : evcc-io/evcc (vehicle/renault.go)
+//
 // Les credentials (email, password) ne sont stockés que dans le Keychain.
-// Les tokens sont conservés en mémoire uniquement et jamais persistés.
+// Les tokens et la config serveur sont conservés en mémoire uniquement
+// et jamais persistés.
 
 actor RenaultAuthentication {
     private let credentialStore: CredentialStore
     private let session: URLSession
     private var cachedToken: RenaultToken?
+    private var cachedServerConfig: RenaultServerConfig?
 
-    // MARK: - Gigya / Kamereon endpoints (privés, non officiels)
-    // Source : hacf-fr/renault-api  renault/const.py
-    private enum GigyaEndpoint {
-        static let apiKey = "3_e8d4g4SE_Fo8ahyHwwP21pqT2Z6L18MWbCK1DgDcXZ8cbOKe5n" // clé publique Gigya Renault EU
-        static let login  = "https://accounts.eu1.gigya.com/accounts.login"
-        static let jwt    = "https://accounts.eu1.gigya.com/accounts.getJWT"
-    }
-    private enum KamereonEndpoint {
-        static let base  = "https://api-wired-prod-1-euw1.wrd-aws.com/commerce/v1"
-        static let token = "/persons/token"
-        // Clé API publique Kamereon Renault EU (header x-api-key)
-        static let apiKey = "oF09WnKqvBDcrQzcW1rJ70D1nsB_AZkbTIKSxE_8JA8w"
-        static let brand  = "RENAULT"
-        static let locale = "fr_FR"
-    }
+    // Région utilisée pour récupérer la config serveur.
+    private static let region = "FR"
+    private static let configURL =
+        "https://renault-wrd-prod-1-euw1-myrapp-one.s3-eu-west-1.amazonaws.com/configuration/android/config_\(region).json"
 
     init(credentialStore: CredentialStore = KeychainCredentialStore(),
          session: URLSession = .shared) {
@@ -75,39 +71,84 @@ actor RenaultAuthentication {
         (try? credentialStore.retrieve(forKey: "renault_email")) != nil
     }
 
+    /// Expose le endpoint + clé Kamereon à jour pour RenaultAPIClient.
+    func kamereonServerInfo() async throws -> (base: String, apiKey: String) {
+        let config = try await serverConfig()
+        return (config.servers.wiredProd.target, config.servers.wiredProd.apikey)
+    }
+
+    /// Invalide token ET config serveur — à appeler après un échec d'auth
+    /// (401/403) avant de retenter, pour couvrir clé API rotée ET token expiré.
+    func invalidateSession() {
+        cachedToken = nil
+        cachedServerConfig = nil
+    }
+
+    /// Invalide uniquement la config serveur (clés API), garde le token.
+    /// Sous-cas de invalidateSession(), gardé disponible séparément si besoin.
+    func forceServerConfigRefresh() {
+        cachedServerConfig = nil
+    }
+
+    // MARK: - Server config
+
+    /// Récupère (et met en cache pour la durée de vie de l'actor) la config
+    /// serveur Gigya/Kamereon à jour.
+    private func serverConfig() async throws -> RenaultServerConfig {
+        if let cached = cachedServerConfig { return cached }
+        guard let url = URL(string: Self.configURL) else {
+            throw RenaultServiceError.unknownError("URL de configuration invalide")
+        }
+        let request = URLRequest(url: url, timeoutInterval: 30)
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+            let code = (response as? HTTPURLResponse)?.statusCode ?? -1
+            print("❌ serverConfig HTTP status: \(code), body: \(String(data: data, encoding: .utf8) ?? "N/A")")
+            throw RenaultServiceError.unknownError("Impossible de récupérer la configuration serveur Renault")
+        }
+        let config = try JSONDecoder().decode(RenaultServerConfig.self, from: data)
+        cachedServerConfig = config
+        return config
+    }
+
     // MARK: - Private: Full Auth Flow
 
     private func authenticate(email: String, password: String) async throws -> RenaultToken {
-        let gigyaToken = try await gigyaLogin(email: email, password: password)
-        let gigyaJWT   = try await gigyaGetJWT(loginToken: gigyaToken)
-        let token      = try await kamereonGetToken(gigyaJWT: gigyaJWT)
+        let config = try await serverConfig()
+        let gigyaToken = try await gigyaLogin(email: email, password: password, config: config.servers.gigyaProd)
+        let gigyaJWT   = try await gigyaGetJWT(loginToken: gigyaToken, config: config.servers.gigyaProd)
+        let token      = try await kamereonGetToken(gigyaJWT: gigyaJWT, config: config.servers.wiredProd)
         return token
     }
 
     // MARK: Step 1 — Gigya login → login_token
 
-    private func gigyaLogin(email: String, password: String) async throws -> String {
-        var components = URLComponents(string: GigyaEndpoint.login)!
+    private func gigyaLogin(email: String, password: String, config: RenaultServerConfig.Server) async throws -> String {
+        let loginURL = config.target + "/accounts.login"
+        var components = URLComponents(string: loginURL)!
         components.queryItems = [
             URLQueryItem(name: "loginID",  value: email),
             URLQueryItem(name: "password", value: password),
-            URLQueryItem(name: "apiKey",   value: GigyaEndpoint.apiKey),
+            URLQueryItem(name: "apiKey",   value: config.apikey),
             URLQueryItem(name: "format",   value: "json")
         ]
         let body = components.percentEncodedQuery?.data(using: .utf8)
 
-        var request = URLRequest(url: URL(string: GigyaEndpoint.login)!, timeoutInterval: 30)
+        var request = URLRequest(url: URL(string: loginURL)!, timeoutInterval: 30)
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
         request.httpBody = body
 
         let data = try await performRequest(request)
+        print("✅ Gigya Login Response: \(String(data: data, encoding: .utf8) ?? "N/A")")
         let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        print("📋 Gigya JSON: \(json ?? [:])")
         guard let statusCode = json?["statusCode"] as? Int, statusCode == 200,
               let loginToken = json?["sessionInfo"] as? [String: Any],
               let cookieValue = loginToken["cookieValue"] as? String
         else {
             let msg = (json?["errorMessage"] as? String) ?? "Échec login Gigya"
+            print("❌ Gigya Error: \(msg)")
             throw RenaultServiceError.unknownError(msg)
         }
         return cookieValue
@@ -115,18 +156,19 @@ actor RenaultAuthentication {
 
     // MARK: Step 2 — Gigya getJWT → JWT
 
-    private func gigyaGetJWT(loginToken: String) async throws -> String {
-        var components = URLComponents(string: GigyaEndpoint.jwt)!
+    private func gigyaGetJWT(loginToken: String, config: RenaultServerConfig.Server) async throws -> String {
+        let jwtURL = config.target + "/accounts.getJWT"
+        var components = URLComponents(string: jwtURL)!
         components.queryItems = [
             URLQueryItem(name: "login_token", value: loginToken),
-            URLQueryItem(name: "apiKey",      value: GigyaEndpoint.apiKey),
+            URLQueryItem(name: "apiKey",      value: config.apikey),
             URLQueryItem(name: "fields",      value: "data.personId,data.gigyaDataCenter"),
             URLQueryItem(name: "expiration",  value: "900"),
             URLQueryItem(name: "format",      value: "json")
         ]
         let body = components.percentEncodedQuery?.data(using: .utf8)
 
-        var request = URLRequest(url: URL(string: GigyaEndpoint.jwt)!, timeoutInterval: 30)
+        var request = URLRequest(url: URL(string: jwtURL)!, timeoutInterval: 30)
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
         request.httpBody = body
@@ -144,15 +186,15 @@ actor RenaultAuthentication {
 
     // MARK: Step 3 — Kamereon token → accessToken + accountId
 
-    private func kamereonGetToken(gigyaJWT: String) async throws -> RenaultToken {
-        let urlString = KamereonEndpoint.base + KamereonEndpoint.token
+    private func kamereonGetToken(gigyaJWT: String, config: RenaultServerConfig.Server) async throws -> RenaultToken {
+        let urlString = config.target + "/commerce/v1/persons/token"
         var request = URLRequest(url: URL(string: urlString)!, timeoutInterval: 30)
         request.httpMethod = "POST"
-        request.setValue("application/json",         forHTTPHeaderField: "Content-Type")
-        request.setValue("application/json",         forHTTPHeaderField: "Accept")
-        request.setValue(KamereonEndpoint.apiKey,    forHTTPHeaderField: "x-api-key")
-        request.setValue(KamereonEndpoint.brand,     forHTTPHeaderField: "x-brand-id")
-        request.setValue(KamereonEndpoint.locale,    forHTTPHeaderField: "x-kamereon-locale")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue(config.apikey,      forHTTPHeaderField: "x-api-key")
+        request.setValue("RENAULT",          forHTTPHeaderField: "x-brand-id")
+        request.setValue("fr_FR",            forHTTPHeaderField: "x-kamereon-locale")
         request.httpBody = try JSONSerialization.data(withJSONObject: ["token": gigyaJWT])
 
         let data = try await performRequest(request)
@@ -205,4 +247,20 @@ struct RenaultToken: Sendable {
     var isExpired: Bool {
         Date() >= expiresAt
     }
+}
+
+// MARK: - RenaultServerConfig
+
+/// Config serveur Gigya/Kamereon récupérée dynamiquement, pour survivre
+/// aux rotations de clé API côté Renault sans recompiler l'app.
+struct RenaultServerConfig: Sendable, Decodable {
+    struct Server: Sendable, Decodable {
+        let target: String
+        let apikey: String
+    }
+    struct Servers: Sendable, Decodable {
+        let gigyaProd: Server
+        let wiredProd: Server
+    }
+    let servers: Servers
 }

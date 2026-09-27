@@ -22,6 +22,7 @@ enum RenaultServiceError: LocalizedError {
     case dataUnavailable
     case timeout
     case tokenExpired
+    case unauthorized
     case unknownError(String)
 
     var errorDescription: String? {
@@ -33,6 +34,7 @@ enum RenaultServiceError: LocalizedError {
         case .dataUnavailable:          return "Données non disponibles"
         case .timeout:                  return "Délai dépassé"
         case .tokenExpired:             return "Session expirée"
+        case .unauthorized:             return "Accès refusé (clé API expirée ou 2FA requis)"
         case .unknownError(let msg):    return msg
         }
     }

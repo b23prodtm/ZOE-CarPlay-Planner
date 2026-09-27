@@ -7,8 +7,11 @@ Application iPhone pour planifier les trajets d'une **Renault ZOE ZE50 R110** av
 ## Fonctionnalités
 
 - 🔋 État de la batterie en temps réel (ou simulation)
-- 🗺️ Planification de trajet avec Apple Maps
+- 🗺️ Planification libre du trajet avec départ GPS ou choix sur carte
 - ⚡ Calcul automatique des arrêts de recharge
+- 🔌 Filtres par réseau de bornes et type de connecteur
+- 🧭 Ouverture d’itinéraire dans l’app de navigation préférée
+- 🖼️ Fond d’écran d’accueil personnalisable
 - 🚗 Interface CarPlay dédiée
 - 🔒 Mode simulation — aucun compte Renault requis
 

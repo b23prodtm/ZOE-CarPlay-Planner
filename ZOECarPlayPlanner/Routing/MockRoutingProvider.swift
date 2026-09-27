@@ -5,14 +5,29 @@ import CoreLocation
 
 /// Fournisseur de routage simulé — fonctionne sans clé API ni réseau.
 struct MockRoutingProvider: RoutingProvider {
-
     func calculateRoute(
         from origin: CLLocationCoordinate2D,
-        to destination: CLLocationCoordinate2D
+        to destination: CLLocationCoordinate2D,
+        preferences: RoutePreferences
     ) async throws -> Route {
-        // Simulation : distance à vol d'oiseau × 1.3 (facteur routier)
-        let distanceKm = haversineDistanceKm(from: origin, to: destination) * 1.3
-        let durationMinutes = distanceKm / 90.0 * 60.0  // ≈ 90 km/h moyen
+        var distanceKm = haversineDistanceKm(from: origin, to: destination) * 1.3
+
+        if preferences.avoidHighways {
+            distanceKm *= 1.15
+        } else if preferences.preferHighways {
+            distanceKm *= 0.95
+        }
+
+        if preferences.avoidTolls {
+            distanceKm *= 1.05
+        }
+
+        if preferences.preferScenic {
+            distanceKm *= 1.08
+        }
+
+        let averageSpeedKmh: Double = preferences.mode == .eco ? 72.0 : 90.0
+        let durationMinutes = distanceKm / averageSpeedKmh * 60.0
 
         return Route(
             origin: RoutePoint(
@@ -28,8 +43,17 @@ struct MockRoutingProvider: RoutingProvider {
             totalDistanceKm: distanceKm,
             estimatedDurationMinutes: durationMinutes,
             waypoints: [],
-            roadType: .typical
+            roadType: .typical,
+            routePreferences: preferences,
+            path: [RouteCoordinate(origin), RouteCoordinate(destination)]
         )
+    }
+
+    func calculateRoute(
+        from origin: CLLocationCoordinate2D,
+        to destination: CLLocationCoordinate2D
+    ) async throws -> Route {
+        try await calculateRoute(from: origin, to: destination, preferences: .init())
     }
 
     // MARK: - Haversine
