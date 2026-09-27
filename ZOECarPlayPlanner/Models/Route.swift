@@ -11,9 +11,28 @@ struct Route: Sendable {
     let estimatedDurationMinutes: Double
     let waypoints: [RoutePoint]
     let roadType: RoadTypeDistribution
+    let routePreferences: RoutePreferences
 
     var displayDistance: String {
-        "\(Int(totalDistanceKm)) km"
+        "\(Int(totalDistanceKm.rounded())) km"
+    }
+
+    init(
+        origin: RoutePoint,
+        destination: RoutePoint,
+        totalDistanceKm: Double,
+        estimatedDurationMinutes: Double,
+        waypoints: [RoutePoint] = [],
+        roadType: RoadTypeDistribution = .typical,
+        routePreferences: RoutePreferences = .init()
+    ) {
+        self.origin = origin
+        self.destination = destination
+        self.totalDistanceKm = totalDistanceKm
+        self.estimatedDurationMinutes = estimatedDurationMinutes
+        self.waypoints = waypoints
+        self.roadType = roadType
+        self.routePreferences = routePreferences
     }
 }
 
@@ -31,6 +50,36 @@ struct RoutePoint: Identifiable, Sendable {
         self.name = name
         self.coordinate = coordinate
         self.distanceFromOriginKm = distanceFromOriginKm
+    }
+}
+
+// MARK: - RoutePreferences
+
+struct RoutePreferences: Codable, Equatable, Sendable {
+    var avoidHighways: Bool
+    var avoidTolls: Bool
+    var preferHighways: Bool
+    var preferScenic: Bool
+
+    init(
+        avoidHighways: Bool = false,
+        avoidTolls: Bool = false,
+        preferHighways: Bool = false,
+        preferScenic: Bool = false
+    ) {
+        self.avoidHighways = avoidHighways
+        self.avoidTolls = avoidTolls
+        self.preferHighways = preferHighways
+        self.preferScenic = preferScenic
+    }
+
+    var summaryText: String {
+        var items: [String] = []
+        if avoidHighways { items.append("évite autoroutes") }
+        if avoidTolls { items.append("évite péages") }
+        if preferHighways { items.append("préférer autoroutes") }
+        if preferScenic { items.append("scenic") }
+        return items.isEmpty ? "standard" : items.joined(separator: ", ")
     }
 }
 
