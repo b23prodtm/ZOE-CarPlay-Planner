@@ -102,6 +102,8 @@ actor RenaultAuthentication {
         let request = URLRequest(url: url, timeoutInterval: 30)
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+            let code = (response as? HTTPURLResponse)?.statusCode ?? -1
+            print("❌ serverConfig HTTP status: \(code), body: \(String(data: data, encoding: .utf8) ?? "N/A")")
             throw RenaultServiceError.unknownError("Impossible de récupérer la configuration serveur Renault")
         }
         let config = try JSONDecoder().decode(RenaultServerConfig.self, from: data)
