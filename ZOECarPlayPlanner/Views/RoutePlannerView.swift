@@ -111,7 +111,10 @@ struct RoutePlannerView: View {
                     }
                 )
             }
-            .alert("Sélection impossible", isPresented: .constant(selectionError != nil)) {
+            .alert("Sélection impossible", isPresented: Binding(
+                get: { selectionError != nil },
+                set: { if !$0 { selectionError = nil } }
+            )) {
                 Button("OK") { selectionError = nil }
             } message: {
                 Text(selectionError?.message ?? "")
@@ -160,6 +163,8 @@ struct RoutePlannerView: View {
                         labeledPlaceRow(title: "Étape \(index + 1)", place: waypoint, placeholder: "Choisir")
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("Étape \(index + 1)")
+                    .accessibilityValue(waypoint.name)
 
                     Button {
                         moveWaypoint(at: index, offset: -1)
@@ -168,6 +173,7 @@ struct RoutePlannerView: View {
                     }
                     .buttonStyle(.borderless)
                     .disabled(index == 0)
+                    .accessibilityLabel("Monter cette étape")
 
                     Button {
                         moveWaypoint(at: index, offset: 1)
@@ -176,6 +182,7 @@ struct RoutePlannerView: View {
                     }
                     .buttonStyle(.borderless)
                     .disabled(index == waypoints.count - 1)
+                    .accessibilityLabel("Descendre cette étape")
 
                     Button(role: .destructive) {
                         removeWaypoint(at: index)
@@ -183,6 +190,7 @@ struct RoutePlannerView: View {
                         Image(systemName: "trash")
                     }
                     .buttonStyle(.borderless)
+                    .accessibilityLabel("Supprimer cette étape")
                 }
             }
 
@@ -239,6 +247,7 @@ struct RoutePlannerView: View {
                 }
             }
             .pickerStyle(.segmented)
+            .accessibilityHint("Le mode Éco réduit la consommation et peut allonger la durée du trajet.")
 
             Toggle(
                 "Éviter les autoroutes",
@@ -643,7 +652,10 @@ private struct LocationPickerSheet: View {
                     Button("Fermer") { dismiss() }
                 }
             }
-            .alert("Sélection impossible", isPresented: .constant(localError != nil)) {
+            .alert("Sélection impossible", isPresented: Binding(
+                get: { localError != nil },
+                set: { if !$0 { localError = nil } }
+            )) {
                 Button("OK") { localError = nil }
             } message: {
                 Text(localError?.message ?? "")

@@ -143,7 +143,13 @@ final class AppState: ObservableObject {
                 weightedRoad += segment.roadType.roadPercent * segment.totalDistanceKm
                 weightedCity += segment.roadType.cityPercent * segment.totalDistanceKm
                 segmentDistances.append(segment.totalDistanceKm)
-                routePath.append(contentsOf: mergedPath(base: routePath, with: segment.path))
+                if routePath.isEmpty {
+                    routePath = segment.path
+                } else if routePath.last == segment.path.first {
+                    routePath.append(contentsOf: segment.path.dropFirst())
+                } else {
+                    routePath.append(contentsOf: segment.path)
+                }
             }
 
             let waypointDistances = Self.cumulativeDistances(for: Array(segmentDistances.dropLast()))
@@ -383,14 +389,6 @@ final class AppState: ObservableObject {
         try? KeychainCredentialStore().store(value: vin, forKey: "renault_vin")
     }
 
-    private func mergedPath(base: [RouteCoordinate], with addition: [RouteCoordinate]) -> [RouteCoordinate] {
-        guard !addition.isEmpty else { return [] }
-        guard let last = base.last, let first = addition.first, last == first else {
-            return addition
-        }
-        return Array(addition.dropFirst())
-    }
-
     private func refreshAvailableNavigationApps() {
         let allApps = PreferredNavigationApp.allCases
         availableNavigationApps = allApps.filter { navigationAppIsAvailable($0) }
@@ -456,6 +454,7 @@ final class AppState: ObservableObject {
             UIApplication.shared.open(url)
             return true
         case .waze:
+            guard points.count <= 2 else { return false }
             guard let destination = points.last,
                   let url = URL(string: "waze://?ll=\(destination.coordinate.latitude),\(destination.coordinate.longitude)&navigate=yes") else {
                 return false
@@ -463,6 +462,7 @@ final class AppState: ObservableObject {
             UIApplication.shared.open(url)
             return true
         case .roole:
+            guard points.count <= 2 else { return false }
             guard let destination = points.last,
                   let url = URL(string: "roole://?destination=\(destination.coordinate.latitude),\(destination.coordinate.longitude)") else {
                 return false

@@ -29,7 +29,10 @@ struct SettingsView: View {
                 saveSection
             }
             .navigationTitle("Réglages")
-            .alert("Impossible de mettre à jour le fond d’écran", isPresented: .constant(wallpaperError != nil)) {
+            .alert("Impossible de mettre à jour le fond d’écran", isPresented: Binding(
+                get: { wallpaperError != nil },
+                set: { if !$0 { wallpaperError = nil } }
+            )) {
                 Button("OK") { wallpaperError = nil }
             } message: {
                 Text(wallpaperError?.message ?? "")
