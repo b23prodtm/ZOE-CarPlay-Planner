@@ -42,11 +42,11 @@ struct ChargingPlanView: View {
                 }
 
                 Button {
-                    if !appState.openCurrentTripInMaps(includeChargingStops: true) {
+                    if !appState.openCurrentTripInPreferredNavigationApp(includeChargingStops: true) {
                         showNavigationError = true
                     }
                 } label: {
-                    Label("Ouvrir dans Plans (CarPlay inclus)", systemImage: "map.fill")
+                    Label("Ouvrir dans \(appState.settings.preferredNavigationApp.displayName)", systemImage: "map.fill")
                 }
                 .foregroundStyle(.blue)
             }

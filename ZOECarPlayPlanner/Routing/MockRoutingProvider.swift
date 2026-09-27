@@ -44,7 +44,8 @@ struct MockRoutingProvider: RoutingProvider {
             estimatedDurationMinutes: durationMinutes,
             waypoints: [],
             roadType: .typical,
-            routePreferences: preferences
+            routePreferences: preferences,
+            path: [RouteCoordinate(origin), RouteCoordinate(destination)]
         )
     }
 

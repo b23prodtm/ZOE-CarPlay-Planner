@@ -12,6 +12,7 @@ struct Route: Sendable {
     let waypoints: [RoutePoint]
     let roadType: RoadTypeDistribution
     let routePreferences: RoutePreferences
+    let path: [RouteCoordinate]
 
     var displayDistance: String {
         "\(Int(totalDistanceKm.rounded())) km"
@@ -24,7 +25,8 @@ struct Route: Sendable {
         estimatedDurationMinutes: Double,
         waypoints: [RoutePoint] = [],
         roadType: RoadTypeDistribution = .typical,
-        routePreferences: RoutePreferences = .init()
+        routePreferences: RoutePreferences = .init(),
+        path: [RouteCoordinate] = []
     ) {
         self.origin = origin
         self.destination = destination
@@ -33,6 +35,27 @@ struct Route: Sendable {
         self.waypoints = waypoints
         self.roadType = roadType
         self.routePreferences = routePreferences
+        self.path = path
+    }
+}
+
+// MARK: - RouteCoordinate
+
+struct RouteCoordinate: Hashable, Sendable {
+    let latitude: Double
+    let longitude: Double
+
+    init(latitude: Double, longitude: Double) {
+        self.latitude = latitude
+        self.longitude = longitude
+    }
+
+    init(_ coordinate: CLLocationCoordinate2D) {
+        self.init(latitude: coordinate.latitude, longitude: coordinate.longitude)
+    }
+
+    var coordinate: CLLocationCoordinate2D {
+        CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
     }
 }
 

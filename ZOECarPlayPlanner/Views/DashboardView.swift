@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct DashboardView: View {
     @EnvironmentObject var appState: AppState
@@ -94,16 +95,25 @@ struct DashboardButton: View {
 
 private extension DashboardView {
     var vehicleImageSection: some View {
-        Image("LaunchLogo")
-            .resizable()
-            .scaledToFit()
-            .frame(maxWidth: 320)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.gray.opacity(0.2), lineWidth: 1)
-            )
-            .accessibilityLabel("Image du véhicule ZOE")
-            .accessibilityAddTraits(.isImage)
+        Group {
+            if let filename = appState.settings.dashboardWallpaperFilename,
+               let image = DashboardWallpaperStore.image(named: filename) {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                Image("LaunchLogo")
+                    .resizable()
+                    .scaledToFit()
+            }
+        }
+        .frame(maxWidth: 320, minHeight: 180, maxHeight: 220)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+        )
+        .accessibilityLabel("Fond d’écran d’accueil")
+        .accessibilityAddTraits(.isImage)
     }
 }

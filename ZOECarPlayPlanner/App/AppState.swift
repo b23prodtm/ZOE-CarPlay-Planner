@@ -1,6 +1,7 @@
 import SwiftUI
 import CoreLocation
 import MapKit
+import UIKit
 
 // MARK: - AppState
 
@@ -43,12 +44,14 @@ final class AppState: ObservableObject {
     @Published var recentPlaces: [TripPlace] = []
     @Published var lastPlannedTrip: PlannedTrip?
     @Published var availableStationsOnRoute: [ChargingStation] = []
+    @Published var availableNavigationApps: [PreferredNavigationApp] = []
 
     // MARK: - Init
 
     init() {
         routeHistory = loadRouteHistory()
         recentPlaces = buildRecentPlaces(from: routeHistory)
+        refreshAvailableNavigationApps()
 
         Task {
             // Vérifier si des credentials existent déjà et construire le service réel
@@ -125,6 +128,7 @@ final class AppState: ObservableObject {
             var weightedRoad = 0.0
             var weightedCity = 0.0
             var segmentDistances: [Double] = []
+            var routePath: [RouteCoordinate] = []
 
             for index in 0..<(points.count - 1) {
                 let segment = try await routingProvider.calculateRoute(
@@ -139,6 +143,7 @@ final class AppState: ObservableObject {
                 weightedRoad += segment.roadType.roadPercent * segment.totalDistanceKm
                 weightedCity += segment.roadType.cityPercent * segment.totalDistanceKm
                 segmentDistances.append(segment.totalDistanceKm)
+                routePath.append(contentsOf: mergedPath(base: routePath, with: segment.path))
             }
 
             let waypointDistances = Self.cumulativeDistances(for: Array(segmentDistances.dropLast()))
@@ -168,7 +173,8 @@ final class AppState: ObservableObject {
                 estimatedDurationMinutes: totalDurationMinutes,
                 waypoints: routeWaypoints,
                 roadType: roadType,
-                routePreferences: effectivePreferences
+                routePreferences: effectivePreferences,
+                path: routePath
             )
             currentRoute = route
 
@@ -181,7 +187,8 @@ final class AppState: ObservableObject {
 
             let stations = try await stationProvider.findStations(
                 along: route,
-                connectorTypes: settings.vehicle.connectorTypes
+                connectorTypes: settings.selectedConnectorTypes,
+                networks: settings.selectedChargingNetworks
             )
             availableStationsOnRoute = stations
             lastPlannedTrip = trip
@@ -217,7 +224,7 @@ final class AppState: ObservableObject {
     }
 
     @discardableResult
-    func openCurrentTripInMaps(includeChargingStops: Bool = true) -> Bool {
+    func openCurrentTripInPreferredNavigationApp(includeChargingStops: Bool = true) -> Bool {
         guard let route = currentRoute else { return false }
 
         var navigationPoints: [(distance: Double, priority: Int, name: String, coordinate: CLLocationCoordinate2D)] = [
@@ -278,21 +285,11 @@ final class AppState: ObservableObject {
             limitedPoints.append(contentsOf: optionalPoints.prefix(availableSlots))
         }
 
-        let mapItems = limitedPoints
+        let routePoints = Array(limitedPoints
             .sorted { $0.distance < $1.distance }
-            .prefix(maxMapItems)
-            .map { point -> MKMapItem in
-                let item = MKMapItem(placemark: MKPlacemark(coordinate: point.coordinate))
-                item.name = point.name
-                return item
-            }
+            .prefix(maxMapItems))
 
-        guard mapItems.count >= 2 else { return false }
-        MKMapItem.openMaps(
-            with: mapItems,
-            launchOptions: [MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving]
-        )
-        return true
+        return open(points: routePoints, preferredApp: settings.preferredNavigationApp)
     }
 
     func setAvoidHighways(_ isEnabled: Bool) {
@@ -384,6 +381,95 @@ final class AppState: ObservableObject {
         let client = RenaultAPIClient(auth: auth)
         realService = RealRenaultVehicleService(apiClient: client, vin: vin)
         try? KeychainCredentialStore().store(value: vin, forKey: "renault_vin")
+    }
+
+    private func mergedPath(base: [RouteCoordinate], with addition: [RouteCoordinate]) -> [RouteCoordinate] {
+        guard !addition.isEmpty else { return [] }
+        guard let last = base.last, let first = addition.first, last == first else {
+            return addition
+        }
+        return Array(addition.dropFirst())
+    }
+
+    private func refreshAvailableNavigationApps() {
+        let allApps = PreferredNavigationApp.allCases
+        availableNavigationApps = allApps.filter { navigationAppIsAvailable($0) }
+        if !availableNavigationApps.contains(settings.preferredNavigationApp) {
+            settings.preferredNavigationApp = .appleMaps
+        }
+    }
+
+    private func navigationAppIsAvailable(_ app: PreferredNavigationApp) -> Bool {
+        switch app {
+        case .appleMaps:
+            return true
+        case .googleMaps:
+            return UIApplication.shared.canOpenURL(URL(string: "comgooglemaps://")!)
+        case .waze:
+            return UIApplication.shared.canOpenURL(URL(string: "waze://")!)
+        case .roole:
+            return UIApplication.shared.canOpenURL(URL(string: "roole://")!)
+        }
+    }
+
+    private func open(
+        points: [(distance: Double, priority: Int, name: String, coordinate: CLLocationCoordinate2D)],
+        preferredApp: PreferredNavigationApp
+    ) -> Bool {
+        guard points.count >= 2 else { return false }
+
+        if navigationAppIsAvailable(preferredApp), open(points: points, in: preferredApp) {
+            return true
+        }
+
+        return open(points: points, in: .appleMaps)
+    }
+
+    private func open(
+        points: [(distance: Double, priority: Int, name: String, coordinate: CLLocationCoordinate2D)],
+        in app: PreferredNavigationApp
+    ) -> Bool {
+        switch app {
+        case .appleMaps:
+            let mapItems = points.map { point -> MKMapItem in
+                let item = MKMapItem(placemark: MKPlacemark(coordinate: point.coordinate))
+                item.name = point.name
+                return item
+            }
+            MKMapItem.openMaps(
+                with: mapItems,
+                launchOptions: [MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving]
+            )
+            return true
+        case .googleMaps:
+            guard let origin = points.first else { return false }
+            let destinationChain = points.dropFirst().map {
+                "\($0.coordinate.latitude),\($0.coordinate.longitude)"
+            }
+            guard let finalDestination = destinationChain.first else { return false }
+            let intermediateStops = Array(destinationChain.dropFirst())
+            let stopSuffix = intermediateStops.isEmpty ? "" : "+to:" + intermediateStops.joined(separator: "+to:")
+            let urlString = "comgooglemaps://?saddr=\(origin.coordinate.latitude),\(origin.coordinate.longitude)&daddr=\(finalDestination)\(stopSuffix)&directionsmode=driving"
+            guard let url = URL(string: urlString.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "") else {
+                return false
+            }
+            UIApplication.shared.open(url)
+            return true
+        case .waze:
+            guard let destination = points.last,
+                  let url = URL(string: "waze://?ll=\(destination.coordinate.latitude),\(destination.coordinate.longitude)&navigate=yes") else {
+                return false
+            }
+            UIApplication.shared.open(url)
+            return true
+        case .roole:
+            guard let destination = points.last,
+                  let url = URL(string: "roole://?destination=\(destination.coordinate.latitude),\(destination.coordinate.longitude)") else {
+                return false
+            }
+            UIApplication.shared.open(url)
+            return true
+        }
     }
 }
 

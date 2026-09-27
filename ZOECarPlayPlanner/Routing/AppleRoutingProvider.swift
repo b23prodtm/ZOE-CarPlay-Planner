@@ -47,7 +47,8 @@ struct AppleRoutingProvider: RoutingProvider {
                 estimatedDurationMinutes: durationMin,
                 waypoints: [],
                 roadType: roadTypeDistribution(for: mkRoute),
-                routePreferences: preferences
+                routePreferences: preferences,
+                path: mkRoute.polyline.routeCoordinates
             )
         } catch let error as RoutingError {
             throw error
@@ -91,12 +92,24 @@ struct AppleRoutingProvider: RoutingProvider {
                 totalDistanceKm: distanceKm,
                 estimatedDurationMinutes: durationMin,
                 waypoints: [],
-                roadType: roadTypeDistribution(for: mkRoute)
+                roadType: roadTypeDistribution(for: mkRoute),
+                path: mkRoute.polyline.routeCoordinates
             )
         } catch let error as RoutingError {
             throw error
         } catch {
             throw RoutingError.networkError(underlying: error)
+        }
+
+        private extension MKPolyline {
+            var routeCoordinates: [RouteCoordinate] {
+                var coordinates = Array(
+                    repeating: CLLocationCoordinate2D(latitude: 0, longitude: 0),
+                    count: pointCount
+                )
+                getCoordinates(&coordinates, range: NSRange(location: 0, length: pointCount))
+                return coordinates.map(RouteCoordinate.init)
+            }
         }
     }
 

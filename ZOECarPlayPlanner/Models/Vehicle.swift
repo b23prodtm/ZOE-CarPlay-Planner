@@ -33,7 +33,7 @@ struct Vehicle: Identifiable, Codable, Sendable {
 
 enum ConnectorType: String, Codable, CaseIterable, Sendable {
     case type2AC = "Type 2 AC"
-    case ccs = "CCS"
+    case ccs = "CCS DC"
     case chademo = "CHAdeMO"
     case domestique = "Domestique"
 

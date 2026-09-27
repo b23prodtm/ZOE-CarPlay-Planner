@@ -2,83 +2,50 @@ import SwiftUI
 import CoreLocation
 import MapKit
 
+private let plannerDefaultRegion = MKCoordinateRegion(
+    center: CLLocationCoordinate2D(latitude: 46.4, longitude: 4.7),
+    span: MKCoordinateSpan(latitudeDelta: 5.0, longitudeDelta: 5.0)
+)
+
 struct RoutePlannerView: View {
     @EnvironmentObject var appState: AppState
+    @StateObject private var locationManager = PlannerLocationManager()
 
-    @State private var selectedOrigin: TripPlace = Self.defaultOrigin
-    @State private var selectedDestination: TripPlace = Self.defaultDestination
+    @State private var selectedOrigin: TripPlace?
+    @State private var selectedDestination: TripPlace?
     @State private var waypoints: [TripPlace] = []
     @State private var pickerContext: LocationPickerContext?
-    @State private var destinationSearchText: String = ""
-    @State private var mapRegion = MKCoordinateRegion(
-        center: CLLocationCoordinate2D(latitude: 46.4, longitude: 4.7),
-        span: MKCoordinateSpan(latitudeDelta: 5.0, longitudeDelta: 5.0)
-    )
-
-    private static let defaultOrigin = TripPlace(
-        name: "Lyon",
-        coordinate: CLLocationCoordinate2D(latitude: 45.7640, longitude: 4.8357)
-    )
-    private static let defaultDestination = TripPlace(
-        name: "Genève",
-        coordinate: CLLocationCoordinate2D(latitude: 46.2044, longitude: 6.1432)
-    )
-
-    private let knownCities: [TripPlace] = [
-        TripPlace(name: "Lyon", coordinate: CLLocationCoordinate2D(latitude: 45.7640, longitude: 4.8357)),
-        TripPlace(name: "Paris", coordinate: CLLocationCoordinate2D(latitude: 48.8566, longitude: 2.3522)),
-        TripPlace(name: "Marseille", coordinate: CLLocationCoordinate2D(latitude: 43.2965, longitude: 5.3698)),
-        TripPlace(name: "Bordeaux", coordinate: CLLocationCoordinate2D(latitude: 44.8378, longitude: -0.5792)),
-        TripPlace(name: "Nantes", coordinate: CLLocationCoordinate2D(latitude: 47.2184, longitude: -1.5536)),
-        TripPlace(name: "Toulouse", coordinate: CLLocationCoordinate2D(latitude: 43.6047, longitude: 1.4442)),
-        TripPlace(name: "Lille", coordinate: CLLocationCoordinate2D(latitude: 50.6292, longitude: 3.0573)),
-        TripPlace(name: "Genève", coordinate: CLLocationCoordinate2D(latitude: 46.2044, longitude: 6.1432)),
-        TripPlace(name: "Lausanne", coordinate: CLLocationCoordinate2D(latitude: 46.5197, longitude: 6.6323)),
-        TripPlace(name: "Turin", coordinate: CLLocationCoordinate2D(latitude: 45.0703, longitude: 7.6869))
-    ]
-
-    private var allSuggestions: [TripPlace] {
-        var places: [TripPlace] = []
-        for place in appState.recentPlaces + knownCities {
-            let alreadyExists = places.contains {
-                abs($0.latitude - place.latitude) < 0.0001
-                && abs($0.longitude - place.longitude) < 0.0001
-            }
-            if !alreadyExists {
-                places.append(place)
-            }
-        }
-        return places
-    }
-
-    private var destinationSuggestions: [TripPlace] {
-        let query = destinationSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !query.isEmpty else { return [] }
-        return allSuggestions
-            .filter { $0.name.localizedCaseInsensitiveContains(query) }
-            .prefix(6)
-            .map { $0 }
-    }
+    @State private var detailMapPosition: MapCameraPosition = .region(plannerDefaultRegion)
+    @State private var selectionError: AppError?
 
     private var mapPoints: [PlannerMapPoint] {
-        var points: [PlannerMapPoint] = [
-            PlannerMapPoint(
-                id: "origin",
-                title: "Départ",
-                subtitle: selectedOrigin.name,
-                coordinate: selectedOrigin.coordinate,
-                tint: .blue,
-                symbol: "play.circle.fill"
-            ),
-            PlannerMapPoint(
-                id: "destination",
-                title: "Destination",
-                subtitle: selectedDestination.name,
-                coordinate: selectedDestination.coordinate,
-                tint: .red,
-                symbol: "flag.circle.fill"
+        var points: [PlannerMapPoint] = []
+
+        if let origin = selectedOrigin {
+            points.append(
+                PlannerMapPoint(
+                    id: "origin",
+                    title: "Départ",
+                    subtitle: origin.name,
+                    coordinate: origin.coordinate,
+                    tint: .blue,
+                    symbol: "play.circle.fill"
+                )
             )
-        ]
+        }
+
+        if let destination = selectedDestination {
+            points.append(
+                PlannerMapPoint(
+                    id: "destination",
+                    title: "Destination",
+                    subtitle: destination.name,
+                    coordinate: destination.coordinate,
+                    tint: .red,
+                    symbol: "flag.circle.fill"
+                )
+            )
+        }
 
         for (index, waypoint) in waypoints.enumerated() {
             points.append(
@@ -98,7 +65,7 @@ struct RoutePlannerView: View {
                 PlannerMapPoint(
                     id: "station-\(station.id.uuidString)",
                     title: station.name,
-                    subtitle: station.locationTypeLabel,
+                    subtitle: "\(station.operatorName) • \(station.locationTypeLabel)",
                     coordinate: station.coordinate,
                     tint: station.isHighway == true ? .green : .orange,
                     symbol: station.mapSymbolName
@@ -109,13 +76,22 @@ struct RoutePlannerView: View {
         return points
     }
 
+    private var routePolyline: MKPolyline? {
+        let coordinates = appState.currentRoute?.path.map(\.coordinate) ?? []
+        guard coordinates.count >= 2 else { return nil }
+        return MKPolyline(coordinates: coordinates, count: coordinates.count)
+    }
 
+    private var canCalculateRoute: Bool {
+        guard let origin = selectedOrigin, let destination = selectedDestination else { return false }
+        return !samePlace(origin, destination)
+    }
 
     var body: some View {
         NavigationStack {
             Form {
                 routeSection
-                destinationSearchSection
+                chargingFilterSection
                 preferenceSection
                 calculateSection
                 loadingSection
@@ -127,18 +103,28 @@ struct RoutePlannerView: View {
             .sheet(item: $pickerContext) { context in
                 LocationPickerSheet(
                     title: context.target.title,
-                    knownCities: knownCities,
                     recentPlaces: appState.recentPlaces,
+                    allowsCurrentLocation: context.target == .origin,
+                    locationManager: locationManager,
                     onSelect: { place in
                         applySelection(place, for: context.target)
                     }
                 )
             }
-            .onAppear(perform: updateMapRegion)
-            .onChange(of: selectedOrigin) { _, _ in updateMapRegion() }
-            .onChange(of: selectedDestination) { _, _ in updateMapRegion() }
-            .onChange(of: waypoints) { _, _ in updateMapRegion() }
-            .onChange(of: appState.availableStationsOnRoute.map { "\($0.id.uuidString)-\($0.coordinate.latitude)-\($0.coordinate.longitude)" }) { _, _ in updateMapRegion() }
+            .alert("Sélection impossible", isPresented: .constant(selectionError != nil)) {
+                Button("OK") { selectionError = nil }
+            } message: {
+                Text(selectionError?.message ?? "")
+            }
+            .onAppear {
+                restoreInitialPlacesIfNeeded()
+                fitMapToContent()
+            }
+            .onChange(of: selectedOrigin?.id) { _, _ in fitMapToContent() }
+            .onChange(of: selectedDestination?.id) { _, _ in fitMapToContent() }
+            .onChange(of: waypoints.map(\.id)) { _, _ in fitMapToContent() }
+            .onChange(of: appState.currentRoute?.path.count ?? 0) { _, _ in fitMapToContent() }
+            .onChange(of: appState.availableStationsOnRoute.map(\.id)) { _, _ in fitMapToContent() }
         }
     }
 
@@ -146,16 +132,23 @@ struct RoutePlannerView: View {
     private var routeSection: some View {
         Section("Trajet") {
             Button {
+                Task { await useCurrentLocationAsOrigin() }
+            } label: {
+                Label("Utiliser ma position GPS actuelle", systemImage: "location.fill")
+            }
+            .foregroundStyle(.blue)
+
+            Button {
                 pickerContext = .init(target: .origin)
             } label: {
-                labeledPlaceRow(title: "Départ", place: selectedOrigin)
+                labeledPlaceRow(title: "Départ", place: selectedOrigin, placeholder: "Choisir sur la carte")
             }
             .foregroundStyle(.primary)
 
             Button {
                 pickerContext = .init(target: .destination)
             } label: {
-                labeledPlaceRow(title: "Destination", place: selectedDestination)
+                labeledPlaceRow(title: "Destination", place: selectedDestination, placeholder: "Choisir sur la carte")
             }
             .foregroundStyle(.primary)
 
@@ -164,11 +157,9 @@ struct RoutePlannerView: View {
                     Button {
                         pickerContext = .init(target: .waypoint(waypoint.id))
                     } label: {
-                        labeledPlaceRow(title: "Étape \(index + 1)", place: waypoint)
+                        labeledPlaceRow(title: "Étape \(index + 1)", place: waypoint, placeholder: "Choisir")
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("Étape \(index + 1)")
-                    .accessibilityValue(waypoint.name)
 
                     Button {
                         moveWaypoint(at: index, offset: -1)
@@ -176,7 +167,6 @@ struct RoutePlannerView: View {
                         Image(systemName: "chevron.up")
                     }
                     .buttonStyle(.borderless)
-                    .accessibilityLabel("Monter cette étape")
                     .disabled(index == 0)
 
                     Button {
@@ -185,7 +175,6 @@ struct RoutePlannerView: View {
                         Image(systemName: "chevron.down")
                     }
                     .buttonStyle(.borderless)
-                    .accessibilityLabel("Descendre cette étape")
                     .disabled(index == waypoints.count - 1)
 
                     Button(role: .destructive) {
@@ -194,7 +183,6 @@ struct RoutePlannerView: View {
                         Image(systemName: "trash")
                     }
                     .buttonStyle(.borderless)
-                    .accessibilityLabel("Supprimer cette étape")
                 }
             }
 
@@ -208,23 +196,37 @@ struct RoutePlannerView: View {
     }
 
     @ViewBuilder
-    private var destinationSearchSection: some View {
-        Section("Recherche d'arrivée") {
-            TextField("Rechercher un lieu d'arrivée", text: $destinationSearchText)
-                .textInputAutocapitalization(.words)
-                .autocorrectionDisabled()
+    private var chargingFilterSection: some View {
+        Section("Filtres de recharge") {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Réseaux")
+                    .font(.subheadline.weight(.semibold))
 
-            if !destinationSuggestions.isEmpty {
-                ForEach(destinationSuggestions) { place in
-                    Button {
-                        applySelection(place, for: .destination)
-                        destinationSearchText = ""
-                    } label: {
-                        Label(place.name, systemImage: "magnifyingglass")
-                    }
-                    .foregroundStyle(.primary)
+                ForEach(ChargingNetwork.allCases, id: \.self) { network in
+                    Toggle(
+                        network.displayName,
+                        isOn: binding(for: network)
+                    )
+                    .tint(.green)
                 }
             }
+
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Connecteurs")
+                    .font(.subheadline.weight(.semibold))
+
+                ForEach(ConnectorType.allCases, id: \.self) { connector in
+                    Toggle(
+                        connector.displayName,
+                        isOn: connectorBinding(for: connector)
+                    )
+                    .tint(.blue)
+                }
+            }
+
+            Text(filterSummaryText)
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
     }
 
@@ -237,7 +239,6 @@ struct RoutePlannerView: View {
                 }
             }
             .pickerStyle(.segmented)
-            .accessibilityHint("Le mode Éco réduit la consommation et peut allonger la durée du trajet.")
 
             Toggle(
                 "Éviter les autoroutes",
@@ -259,6 +260,7 @@ struct RoutePlannerView: View {
                 )
             )
             .tint(.green)
+
             Toggle("Préférer les routes pittoresques", isOn: $appState.settings.routePreferences.preferScenic)
                 .tint(.purple)
         }
@@ -268,17 +270,11 @@ struct RoutePlannerView: View {
     private var calculateSection: some View {
         Section {
             Button {
-                Task {
-                    await appState.planTrip(
-                        origin: selectedOrigin,
-                        destination: selectedDestination,
-                        waypoints: waypoints
-                    )
-                }
+                Task { await calculateRoute() }
             } label: {
                 Label("Calculer le trajet", systemImage: "arrow.triangle.branch")
             }
-            .disabled(samePlace(selectedOrigin, selectedDestination))
+            .disabled(!canCalculateRoute)
 
             if appState.settings.routePreferences != RoutePreferences() {
                 Label(appState.settings.routePreferences.summaryText, systemImage: "leaf")
@@ -305,34 +301,43 @@ struct RoutePlannerView: View {
     @ViewBuilder
     private var detailedMapSection: some View {
         Section("Plan détaillé") {
-            Map(coordinateRegion: $mapRegion, annotationItems: mapPoints) { point in
-                MapAnnotation(coordinate: point.coordinate) {
-                    VStack(spacing: 2) {
-                        Image(systemName: point.symbol)
-                            .font(.caption)
-                            .padding(6)
-                            .background(point.tint.opacity(0.15))
-                            .foregroundStyle(point.tint)
-                            .clipShape(Circle())
-                        Text(point.title)
-                            .font(.caption2)
-                            .lineLimit(1)
+            Map(position: $detailMapPosition) {
+                if let routePolyline {
+                    MapPolyline(routePolyline)
+                        .stroke(.blue, lineWidth: 5)
+                }
+
+                ForEach(mapPoints) { point in
+                    Annotation(point.title, coordinate: point.coordinate) {
+                        VStack(spacing: 2) {
+                            Image(systemName: point.symbol)
+                                .font(.caption)
+                                .padding(6)
+                                .background(point.tint.opacity(0.15))
+                                .foregroundStyle(point.tint)
+                                .clipShape(Circle())
+                            Text(point.title)
+                                .font(.caption2)
+                                .lineLimit(1)
+                        }
                     }
-                    .accessibilityElement(children: .ignore)
-                    .accessibilityLabel("\(point.title), \(point.subtitle)")
-                    .accessibilityValue("Repère de carte")
-                    .accessibilityAddTraits(.isImage)
                 }
             }
-            .frame(height: 280)
+            .frame(height: 300)
             .clipShape(RoundedRectangle(cornerRadius: 10))
 
             Button {
-                updateMapRegion()
+                fitMapToContent()
             } label: {
                 Label("Ajuster la carte au trajet", systemImage: "scope")
             }
             .foregroundStyle(.blue)
+
+            if routePolyline == nil, appState.currentRoute != nil {
+                Text("Le tracé détaillé n'est pas disponible pour cet itinéraire.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
 
             if !appState.availableStationsOnRoute.isEmpty {
                 Text("Bornes visibles sur la carte : \(appState.availableStationsOnRoute.count)")
@@ -343,22 +348,7 @@ struct RoutePlannerView: View {
                     HStack {
                         Label(station.name, systemImage: station.mapSymbolName)
                         Spacer()
-                        Text(station.locationTypeLabel)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            }
-
-            if !mapPoints.isEmpty {
-                Text("Points affichés")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
-                ForEach(mapPoints) { point in
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(point.title)
-                        Text(point.subtitle)
+                        Text("\(station.operatorName) • \(station.locationTypeLabel)")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -375,14 +365,6 @@ struct RoutePlannerView: View {
                 LabeledContent("Durée estimée", value: "\(Int(route.estimatedDurationMinutes)) min")
                 if !route.waypoints.isEmpty {
                     LabeledContent("Étapes", value: "\(route.waypoints.count)")
-                }
-            }
-
-            if !route.waypoints.isEmpty {
-                Section("Ordre des étapes") {
-                    ForEach(route.waypoints) { point in
-                        Label(point.name, systemImage: "point.topleft.down.curvedto.point.bottomright.up")
-                    }
                 }
             }
         }
@@ -416,15 +398,72 @@ struct RoutePlannerView: View {
     }
 
     @ViewBuilder
-    private func labeledPlaceRow(title: String, place: TripPlace) -> some View {
+    private func labeledPlaceRow(title: String, place: TripPlace?, placeholder: String) -> some View {
         HStack {
             Text(title)
             Spacer()
-            Text(place.name)
-                .foregroundStyle(.secondary)
+            Text(place?.name ?? placeholder)
+                .foregroundStyle(place == nil ? .tertiary : .secondary)
             Image(systemName: "chevron.up.chevron.down")
                 .font(.caption)
                 .foregroundStyle(.tertiary)
+        }
+    }
+
+    private var filterSummaryText: String {
+        let networkCount = appState.settings.selectedChargingNetworks.count
+        let connectorCount = appState.settings.selectedConnectorTypes.count
+        return "\(networkCount) réseau\(networkCount > 1 ? "x" : "") • \(connectorCount) connecteur\(connectorCount > 1 ? "s" : "")"
+    }
+
+    private func binding(for network: ChargingNetwork) -> Binding<Bool> {
+        Binding(
+            get: { appState.settings.selectedChargingNetworks.contains(network) },
+            set: { isEnabled in
+                updateSelection(&appState.settings.selectedChargingNetworks, value: network, isEnabled: isEnabled)
+            }
+        )
+    }
+
+    private func connectorBinding(for connector: ConnectorType) -> Binding<Bool> {
+        Binding(
+            get: { appState.settings.selectedConnectorTypes.contains(connector) },
+            set: { isEnabled in
+                updateSelection(&appState.settings.selectedConnectorTypes, value: connector, isEnabled: isEnabled)
+            }
+        )
+    }
+
+    private func updateSelection<T: Equatable>(_ collection: inout [T], value: T, isEnabled: Bool) {
+        if isEnabled {
+            if !collection.contains(value) {
+                collection.append(value)
+            }
+        } else if collection.count > 1 {
+            collection.removeAll { $0 == value }
+        }
+    }
+
+    private func calculateRoute() async {
+        guard let origin = selectedOrigin, let destination = selectedDestination else { return }
+        await appState.planTrip(origin: origin, destination: destination, waypoints: waypoints)
+    }
+
+    private func useCurrentLocationAsOrigin() async {
+        do {
+            let coordinate = try await locationManager.requestCurrentCoordinate()
+            selectedOrigin = TripPlace(name: "Ma position actuelle", coordinate: coordinate)
+        } catch {
+            selectionError = AppError.from(error)
+        }
+    }
+
+    private func restoreInitialPlacesIfNeeded() {
+        guard selectedOrigin == nil, selectedDestination == nil else { return }
+        if let latestTrip = appState.routeHistory.first {
+            selectedOrigin = latestTrip.origin
+            selectedDestination = latestTrip.destination
+            waypoints = latestTrip.waypoints
         }
     }
 
@@ -459,29 +498,14 @@ struct RoutePlannerView: View {
         }
     }
 
-    private func updateMapRegion() {
-        guard !mapPoints.isEmpty else { return }
+    private func fitMapToContent() {
+        let coordinates = mapPoints.map(\.coordinate) + (appState.currentRoute?.path.map(\.coordinate) ?? [])
+        guard !coordinates.isEmpty else {
+            detailMapPosition = .region(plannerDefaultRegion)
+            return
+        }
 
-        let latitudes = mapPoints.map { $0.coordinate.latitude }
-        let longitudes = mapPoints.map { $0.coordinate.longitude }
-
-        guard let minLat = latitudes.min(),
-              let maxLat = latitudes.max(),
-              let minLon = longitudes.min(),
-              let maxLon = longitudes.max()
-        else { return }
-
-        let center = CLLocationCoordinate2D(
-            latitude: (minLat + maxLat) / 2,
-            longitude: (minLon + maxLon) / 2
-        )
-
-        let span = MKCoordinateSpan(
-            latitudeDelta: max(0.25, (maxLat - minLat) * 1.6),
-            longitudeDelta: max(0.25, (maxLon - minLon) * 1.6)
-        )
-
-        mapRegion = MKCoordinateRegion(center: center, span: span)
+        detailMapPosition = .rect(MKMapRect.boundingRect(for: coordinates))
     }
 }
 
@@ -490,7 +514,7 @@ private struct LocationPickerContext: Identifiable {
     let target: LocationPickerTarget
 }
 
-private enum LocationPickerTarget {
+private enum LocationPickerTarget: Equatable {
     case origin
     case destination
     case newWaypoint
@@ -523,25 +547,62 @@ private struct LocationPickerSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     let title: String
-    let knownCities: [TripPlace]
     let recentPlaces: [TripPlace]
+    let allowsCurrentLocation: Bool
+    @ObservedObject var locationManager: PlannerLocationManager
     let onSelect: (TripPlace) -> Void
 
+    @StateObject private var searchService = LocationSearchService()
     @State private var searchText: String = ""
-
-    private var filteredCities: [TripPlace] {
-        if searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return knownCities
-        }
-
-        return knownCities.filter {
-            $0.name.localizedCaseInsensitiveContains(searchText)
-        }
-    }
+    @State private var mapPosition: MapCameraPosition = .region(plannerDefaultRegion)
+    @State private var mapCenter = plannerDefaultRegion.center
+    @State private var isResolvingSelection = false
+    @State private var localError: AppError?
 
     var body: some View {
         NavigationStack {
             List {
+                if allowsCurrentLocation {
+                    Section("Position actuelle") {
+                        Button {
+                            Task { await pickCurrentLocation() }
+                        } label: {
+                            Label("Utiliser ma position GPS actuelle", systemImage: "location.fill")
+                        }
+                    }
+                }
+
+                Section("Carte") {
+                    ZStack {
+                        Map(position: $mapPosition) {
+                            Annotation("Point sélectionné", coordinate: mapCenter) {
+                                Image(systemName: "mappin.circle.fill")
+                                    .font(.title)
+                                    .foregroundStyle(.red)
+                            }
+                        }
+                        .frame(height: 240)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .onMapCameraChange(frequency: .continuous) { context in
+                            mapCenter = context.region.center
+                        }
+                    }
+
+                    Button {
+                        Task { await pickMapCenter() }
+                    } label: {
+                        if isResolvingSelection {
+                            HStack {
+                                ProgressView()
+                                Text("Validation du point…")
+                            }
+                        } else {
+                            Label("Choisir le point au centre de la carte", systemImage: "mappin.and.ellipse")
+                        }
+                    }
+                    .disabled(isResolvingSelection)
+                }
+
                 if !recentPlaces.isEmpty {
                     Section("Récents") {
                         ForEach(recentPlaces) { place in
@@ -550,23 +611,31 @@ private struct LocationPickerSheet: View {
                                 dismiss()
                             }
                             .foregroundStyle(.primary)
-                            .accessibilityLabel("Récent : \(place.name)")
                         }
                     }
                 }
 
-                Section("Villes") {
-                    ForEach(filteredCities) { place in
-                        Button(place.name) {
-                            onSelect(place)
-                            dismiss()
+                if !searchService.completions.isEmpty {
+                    Section("Résultats") {
+                        ForEach(searchService.completions) { completion in
+                            Button {
+                                Task { await pickCompletion(completion) }
+                            } label: {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(completion.title)
+                                    if !completion.subtitle.isEmpty {
+                                        Text(completion.subtitle)
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                            }
+                            .foregroundStyle(.primary)
                         }
-                        .foregroundStyle(.primary)
-                        .accessibilityLabel("Ville : \(place.name)")
                     }
                 }
             }
-            .searchable(text: $searchText, prompt: "Rechercher une ville")
+            .searchable(text: $searchText, prompt: "Rechercher un lieu")
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -574,6 +643,227 @@ private struct LocationPickerSheet: View {
                     Button("Fermer") { dismiss() }
                 }
             }
+            .alert("Sélection impossible", isPresented: .constant(localError != nil)) {
+                Button("OK") { localError = nil }
+            } message: {
+                Text(localError?.message ?? "")
+            }
+            .onChange(of: searchText) { _, newValue in
+                searchService.update(query: newValue)
+            }
+        }
+    }
+
+    private func pickCurrentLocation() async {
+        do {
+            let coordinate = try await locationManager.requestCurrentCoordinate()
+            onSelect(TripPlace(name: "Ma position actuelle", coordinate: coordinate))
+            dismiss()
+        } catch {
+            localError = AppError.from(error)
+        }
+    }
+
+    private func pickCompletion(_ completion: LocationSearchCompletion) async {
+        isResolvingSelection = true
+        defer { isResolvingSelection = false }
+
+        do {
+            let place = try await searchService.resolve(completion: completion)
+            onSelect(place)
+            dismiss()
+        } catch {
+            localError = AppError.from(error)
+        }
+    }
+
+    private func pickMapCenter() async {
+        isResolvingSelection = true
+        defer { isResolvingSelection = false }
+
+        do {
+            let name = try await reverseGeocodedName(for: mapCenter)
+            onSelect(TripPlace(name: name, coordinate: mapCenter))
+            dismiss()
+        } catch {
+            localError = AppError.from(error)
+        }
+    }
+
+    private func reverseGeocodedName(for coordinate: CLLocationCoordinate2D) async throws -> String {
+        let geocoder = CLGeocoder()
+        let placemarks = try await geocoder.reverseGeocodeLocation(
+            CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+        )
+
+        if let placemark = placemarks.first {
+            let components = [
+                placemark.name,
+                placemark.locality,
+                placemark.administrativeArea
+            ]
+            .compactMap { $0 }
+            .filter { !$0.isEmpty }
+
+            if !components.isEmpty {
+                return components.joined(separator: ", ")
+            }
+        }
+
+        return String(format: "%.5f, %.5f", coordinate.latitude, coordinate.longitude)
+    }
+}
+
+@MainActor
+private final class PlannerLocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
+    @Published private(set) var authorizationStatus: CLAuthorizationStatus
+
+    private let manager = CLLocationManager()
+    private var continuation: CheckedContinuation<CLLocationCoordinate2D, Error>?
+    private var authorizationContinuation: CheckedContinuation<Void, Error>?
+
+    override init() {
+        authorizationStatus = manager.authorizationStatus
+        super.init()
+        manager.delegate = self
+    }
+
+    func requestCurrentCoordinate() async throws -> CLLocationCoordinate2D {
+        if authorizationStatus == .notDetermined {
+            try await requestAuthorizationIfNeeded()
+        }
+
+        guard authorizationStatus != .denied, authorizationStatus != .restricted else {
+            throw NSError(
+                domain: "PlannerLocationManager",
+                code: 1,
+                userInfo: [NSLocalizedDescriptionKey: "L’accès à la position GPS est refusé."]
+            )
+        }
+
+        return try await withCheckedThrowingContinuation { continuation in
+            self.continuation = continuation
+            manager.requestLocation()
+        }
+    }
+
+    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        authorizationStatus = manager.authorizationStatus
+        switch manager.authorizationStatus {
+        case .authorizedAlways, .authorizedWhenInUse:
+            authorizationContinuation?.resume(returning: ())
+            authorizationContinuation = nil
+        case .denied, .restricted:
+            authorizationContinuation?.resume(
+                throwing: NSError(
+                    domain: "PlannerLocationManager",
+                    code: 1,
+                    userInfo: [NSLocalizedDescriptionKey: "L’accès à la position GPS est refusé."]
+                )
+            )
+            authorizationContinuation = nil
+        case .notDetermined:
+            break
+        @unknown default:
+            authorizationContinuation?.resume(returning: ())
+            authorizationContinuation = nil
+        }
+    }
+
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        guard let coordinate = locations.last?.coordinate else {
+            continuation?.resume(
+                throwing: NSError(
+                    domain: "PlannerLocationManager",
+                    code: 2,
+                    userInfo: [NSLocalizedDescriptionKey: "Position GPS indisponible."]
+                )
+            )
+            continuation = nil
+            return
+        }
+
+        continuation?.resume(returning: coordinate)
+        continuation = nil
+    }
+
+    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        continuation?.resume(throwing: error)
+        continuation = nil
+    }
+
+    private func requestAuthorizationIfNeeded() async throws {
+        guard authorizationStatus == .notDetermined else { return }
+
+        try await withCheckedThrowingContinuation { continuation in
+            authorizationContinuation = continuation
+            manager.requestWhenInUseAuthorization()
+        }
+    }
+}
+
+private struct LocationSearchCompletion: Identifiable {
+    let id = UUID()
+    let completion: MKLocalSearchCompletion
+
+    var title: String { completion.title }
+    var subtitle: String { completion.subtitle }
+}
+
+@MainActor
+private final class LocationSearchService: NSObject, ObservableObject, MKLocalSearchCompleterDelegate {
+    @Published private(set) var completions: [LocationSearchCompletion] = []
+
+    private let completer = MKLocalSearchCompleter()
+
+    override init() {
+        super.init()
+        completer.delegate = self
+        completer.resultTypes = [.address, .pointOfInterest]
+    }
+
+    func update(query: String) {
+        let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        completer.queryFragment = trimmedQuery
+        if trimmedQuery.isEmpty {
+            completions = []
+        }
+    }
+
+    func resolve(completion: LocationSearchCompletion) async throws -> TripPlace {
+        let request = MKLocalSearch.Request(completion: completion.completion)
+        let response = try await MKLocalSearch(request: request).start()
+        guard let item = response.mapItems.first else {
+            throw RoutingError.noRouteFound
+        }
+
+        let coordinate = item.placemark.coordinate
+        let name = [item.name, item.placemark.title]
+            .compactMap { $0 }
+            .first(where: { !$0.isEmpty })
+            ?? String(format: "%.5f, %.5f", coordinate.latitude, coordinate.longitude)
+
+        return TripPlace(name: name, coordinate: coordinate)
+    }
+
+    func completerDidUpdateResults(_ completer: MKLocalSearchCompleter) {
+        completions = completer.results.prefix(8).map(LocationSearchCompletion.init)
+    }
+
+    func completer(_ completer: MKLocalSearchCompleter, didFailWithError error: Error) {
+        completions = []
+    }
+}
+
+private extension MKMapRect {
+    static func boundingRect(for coordinates: [CLLocationCoordinate2D]) -> MKMapRect {
+        coordinates.reduce(.null) { partialResult, coordinate in
+            let point = MKMapPoint(coordinate)
+            let rect = MKMapRect(
+                origin: point,
+                size: MKMapSize(width: 1_000, height: 1_000)
+            )
+            return partialResult.isNull ? rect : partialResult.union(rect)
         }
     }
 }
