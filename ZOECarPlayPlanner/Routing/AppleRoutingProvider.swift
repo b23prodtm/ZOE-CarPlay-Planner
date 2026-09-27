@@ -100,17 +100,6 @@ struct AppleRoutingProvider: RoutingProvider {
         } catch {
             throw RoutingError.networkError(underlying: error)
         }
-
-        private extension MKPolyline {
-            var routeCoordinates: [RouteCoordinate] {
-                var coordinates = Array(
-                    repeating: CLLocationCoordinate2D(latitude: 0, longitude: 0),
-                    count: pointCount
-                )
-                getCoordinates(&coordinates, range: NSRange(location: 0, length: pointCount))
-                return coordinates.map(RouteCoordinate.init)
-            }
-        }
     }
 
     // MARK: - Estimation du type de route
@@ -124,6 +113,17 @@ struct AppleRoutingProvider: RoutingProvider {
             return RoadTypeDistribution(highwayPercent: 40, roadPercent: 50, cityPercent: 10)
         } else {
             return RoadTypeDistribution(highwayPercent: 10, roadPercent: 30, cityPercent: 60)
+        }
+    }
+
+    private extension MKPolyline {
+        var routeCoordinates: [RouteCoordinate] {
+            var coordinates = Array(
+                repeating: CLLocationCoordinate2D(latitude: 0, longitude: 0),
+                count: pointCount
+            )
+            getCoordinates(&coordinates, range: NSRange(location: 0, length: pointCount))
+            return coordinates.map(RouteCoordinate.init)
         }
     }
 }

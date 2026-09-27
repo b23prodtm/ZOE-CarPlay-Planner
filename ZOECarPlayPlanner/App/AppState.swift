@@ -417,7 +417,7 @@ final class AppState: ObservableObject {
     ) -> Bool {
         guard points.count >= 2 else { return false }
 
-        if preferredApp == .waze || preferredApp == .roole, points.count > 2 {
+        if preferredApp == .googleMaps || preferredApp == .waze || preferredApp == .roole, points.count > 2 {
             return open(points: points, in: .appleMaps)
         }
 
@@ -445,18 +445,13 @@ final class AppState: ObservableObject {
             )
             return true
         case .googleMaps:
+            guard points.count <= 2 else { return false }
             guard let origin = points.first else { return false }
-            let routeStops = points.dropFirst().map {
-                "\($0.coordinate.latitude),\($0.coordinate.longitude)"
-            }
-            guard let finalDestination = routeStops.last else { return false }
-            let intermediateStops = Array(routeStops.dropLast())
-            let stopSuffix = intermediateStops.isEmpty ? "" : "+to:" + intermediateStops.joined(separator: "+to:")
             var components = URLComponents()
             components.scheme = "comgooglemaps"
             components.queryItems = [
                 URLQueryItem(name: "saddr", value: "\(origin.coordinate.latitude),\(origin.coordinate.longitude)"),
-                URLQueryItem(name: "daddr", value: "\(finalDestination)\(stopSuffix)"),
+                URLQueryItem(name: "daddr", value: "\(points[1].coordinate.latitude),\(points[1].coordinate.longitude)"),
                 URLQueryItem(name: "directionsmode", value: "driving")
             ]
             guard let url = components.url else { return false }

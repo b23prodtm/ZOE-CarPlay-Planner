@@ -136,13 +136,6 @@ struct RoutePlannerView: View {
     private var routeSection: some View {
         Section("Trajet") {
             Button {
-                Task { await useCurrentLocationAsOrigin() }
-            } label: {
-                Label("Utiliser ma position GPS actuelle", systemImage: "location.fill")
-            }
-            .foregroundStyle(.blue)
-
-            Button {
                 pickerContext = .init(target: .origin)
             } label: {
                 labeledPlaceRow(title: "Départ", place: selectedOrigin, placeholder: "Choisir sur la carte")
@@ -562,6 +555,7 @@ private struct LocationPickerSheet: View {
     @ObservedObject var locationManager: PlannerLocationManager
     let onSelect: (TripPlace) -> Void
 
+    private let geocoder = CLGeocoder()
     @StateObject private var searchService = LocationSearchService()
     @State private var searchText: String = ""
     @State private var mapPosition: MapCameraPosition = .region(plannerDefaultRegion)
@@ -709,7 +703,6 @@ private struct LocationPickerSheet: View {
     }
 
     private func reverseGeocodedName(for coordinate: CLLocationCoordinate2D) async throws -> String {
-        let geocoder = CLGeocoder()
         let placemarks = try await geocoder.reverseGeocodeLocation(
             CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
         )

@@ -108,6 +108,7 @@ private extension DashboardView {
             }
         }
         .frame(maxWidth: 320, minHeight: 180, maxHeight: 220)
+        .clipped()
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(
             RoundedRectangle(cornerRadius: 12)
