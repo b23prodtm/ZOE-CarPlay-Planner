@@ -16,19 +16,19 @@ protocol ChargingStationProvider: Sendable {
 /// Fournisseur de bornes simulé — fonctionne sans API externe.
 struct MockChargingStationProvider: ChargingStationProvider {
     private let highwayStationPresets: [StationPreset] = [
-        StationPreset(name: "Aire de Mâcon-Saint-Albain", network: .ionity, powerKW: 350),
-        StationPreset(name: "Aire de Nemours", network: .electra, powerKW: 300),
-        StationPreset(name: "Aire de Beaune-Tailly", network: .totalEnergies, powerKW: 175),
-        StationPreset(name: "Aire de Reims-Champagne", network: .fastned, powerKW: 300),
-        StationPreset(name: "Aire de la Vallée de la Somme", network: .ionity, powerKW: 350),
-        StationPreset(name: "Aire de Lançon-de-Provence", network: .electra, powerKW: 300)
+        StationPreset(network: .ionity, powerKW: 350),
+        StationPreset(network: .electra, powerKW: 300),
+        StationPreset(network: .totalEnergies, powerKW: 175),
+        StationPreset(network: .fastned, powerKW: 300),
+        StationPreset(network: .ionity, powerKW: 350),
+        StationPreset(network: .electra, powerKW: 300)
     ]
 
     private let localStationPresets: [StationPreset] = [
-        StationPreset(name: "Borne Electra Centre-ville", network: .electra, powerKW: 150),
-        StationPreset(name: "Borne TotalEnergies Gare", network: .totalEnergies, powerKW: 175),
-        StationPreset(name: "Borne Allego Périphérie", network: .allego, powerKW: 100),
-        StationPreset(name: "Borne Réseau local Parking", network: .local, powerKW: 50)
+        StationPreset(network: .electra, powerKW: 150),
+        StationPreset(network: .totalEnergies, powerKW: 175),
+        StationPreset(network: .allego, powerKW: 100),
+        StationPreset(network: .local, powerKW: 50)
     ]
 
     func findStations(
@@ -41,6 +41,7 @@ struct MockChargingStationProvider: ChargingStationProvider {
         var stations: [ChargingStation] = []
         let totalKm = route.totalDistanceKm
         let routeCoordinates = sampledRouteCoordinates(for: route)
+        let maximumDeviationMeters = 1_000.0
         var distanceMark = 80.0
         var generatedIndex = 0
         let preferHighwayNetwork = !route.routePreferences.avoidHighways
@@ -60,10 +61,19 @@ struct MockChargingStationProvider: ChargingStationProvider {
                     fraction: fraction,
                     lateralShiftDegrees: preferHighwayNetwork ? 0.0035 : 0.002
                 )
+                let routeDeviationMeters = shortestDistanceMeters(
+                    from: coordinate,
+                    to: routeCoordinates
+                )
+                guard routeDeviationMeters <= maximumDeviationMeters else { continue }
 
                 let station = ChargingStation(
                     id: UUID(),
-                    name: preset.name,
+                    name: makeStationName(
+                        network: preset.network,
+                        distanceKm: candidateDistance,
+                        isHighway: preferHighwayNetwork
+                    ),
                     coordinate: coordinate,
                     network: preset.network,
                     connectors: connectors(for: preset),
@@ -134,6 +144,18 @@ struct MockChargingStationProvider: ChargingStationProvider {
         )
     }
 
+    private func makeStationName(
+        network: ChargingNetwork,
+        distanceKm: Double,
+        isHighway: Bool
+    ) -> String {
+        let roundedKm = Int(distanceKm.rounded())
+        if isHighway {
+            return "Aire autoroute \(network.displayName) • km \(roundedKm)"
+        }
+        return "Borne \(network.displayName) • km \(roundedKm)"
+    }
+
     private func offsetCoordinate(
         base: CLLocationCoordinate2D,
         along routeCoordinates: [CLLocationCoordinate2D],
@@ -168,10 +190,56 @@ struct MockChargingStationProvider: ChargingStationProvider {
             StationConnector(id: UUID(), type: .ccs, powerKW: preset.powerKW, isAvailable: true)
         ]
     }
+
+    private func shortestDistanceMeters(
+        from coordinate: CLLocationCoordinate2D,
+        to routeCoordinates: [CLLocationCoordinate2D]
+    ) -> Double {
+        guard routeCoordinates.count >= 2 else { return 0 }
+
+        return zip(routeCoordinates, routeCoordinates.dropFirst())
+            .map { distanceToSegmentMeters(point: coordinate, start: $0.0, end: $0.1) }
+            .min() ?? 0
+    }
+
+    private func distanceToSegmentMeters(
+        point: CLLocationCoordinate2D,
+        start: CLLocationCoordinate2D,
+        end: CLLocationCoordinate2D
+    ) -> Double {
+        let meanLatitudeRadians = ((start.latitude + end.latitude + point.latitude) / 3.0) * .pi / 180.0
+        let metersPerDegreeLatitude = 111_320.0
+        let metersPerDegreeLongitude = max(1.0, cos(meanLatitudeRadians) * 111_320.0)
+
+        let startX = start.longitude * metersPerDegreeLongitude
+        let startY = start.latitude * metersPerDegreeLatitude
+        let endX = end.longitude * metersPerDegreeLongitude
+        let endY = end.latitude * metersPerDegreeLatitude
+        let pointX = point.longitude * metersPerDegreeLongitude
+        let pointY = point.latitude * metersPerDegreeLatitude
+
+        let deltaX = endX - startX
+        let deltaY = endY - startY
+        let lengthSquared = (deltaX * deltaX) + (deltaY * deltaY)
+        guard lengthSquared > 0 else {
+            return hypot(pointX - startX, pointY - startY)
+        }
+
+        let projection = max(
+            0,
+            min(
+                1,
+                ((pointX - startX) * deltaX + (pointY - startY) * deltaY) / lengthSquared
+            )
+        )
+
+        let projectedX = startX + projection * deltaX
+        let projectedY = startY + projection * deltaY
+        return hypot(pointX - projectedX, pointY - projectedY)
+    }
 }
 
 private struct StationPreset {
-    let name: String
     let network: ChargingNetwork
     let powerKW: Double
 }

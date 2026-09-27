@@ -221,7 +221,7 @@ final class MockRoutingTests: XCTestCase {
 
         XCTAssertFalse(stations.isEmpty)
         XCTAssertTrue(stations.allSatisfy { $0.isHighway == true })
-        XCTAssertTrue(stations.allSatisfy { $0.name.contains("Aire de") })
+        XCTAssertTrue(stations.allSatisfy { $0.name.contains("Aire autoroute") })
         XCTAssertTrue(stations.allSatisfy { [.ionity, .electra, .totalEnergies, .fastned].contains($0.network) })
     }
 
@@ -291,6 +291,7 @@ final class MockRoutingTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(stations.count, 4)
         XCTAssertTrue(stations.contains { abs($0.coordinate.longitude) < 0.05 }, "Au moins une borne doit rester sur le premier segment du trajet.")
         XCTAssertTrue(stations.contains { $0.coordinate.latitude > 0.95 }, "Au moins une borne doit suivre la fin du parcours, pas la diagonale origine-destination.")
+        XCTAssertTrue(stations.allSatisfy { $0.name.contains("km") })
     }
 
     func test_stationProvider_generatesAlternativeChoicesNearSameStop() async throws {

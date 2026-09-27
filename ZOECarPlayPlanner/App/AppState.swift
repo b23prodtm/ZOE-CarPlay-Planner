@@ -219,6 +219,7 @@ final class AppState: ObservableObject {
             addToHistory(trip)
 
             rebuildChargingPlan()
+            validateChargingPlanAlignment()
         } catch {
             self.error = AppError.from(error)
         }
@@ -407,6 +408,7 @@ final class AppState: ObservableObject {
         chargingStationSelectionPreference = preference
         selectedStationIDsByStop = [:]
         rebuildChargingPlan()
+        validateChargingPlanAlignment()
     }
 
     // MARK: - Private
@@ -451,6 +453,82 @@ final class AppState: ObservableObject {
             stationSelectionPreference: chargingStationSelectionPreference
         )
         chargingPlan = chargingPlanner.plan(input: input)
+    }
+
+    private func validateChargingPlanAlignment() {
+        guard let route = currentRoute, let plan = chargingPlan else { return }
+
+        let routeCoordinates = route.path.map(\.coordinate).isEmpty
+            ? [route.origin.coordinate, route.destination.coordinate]
+            : route.path.map(\.coordinate)
+
+        let maximumRouteDeviationMeters = 1_000.0
+        let maximumProgressDeviationKm = 20.0
+
+        let hasInvalidStop = plan.stops.contains { stop in
+            guard let station = selectedStation(for: stop) else { return false }
+            let routeDeviationMeters = shortestDistanceMeters(
+                from: station.coordinate,
+                to: routeCoordinates
+            )
+            let progressDeviationKm = abs(station.distanceFromRouteKm - stop.distanceFromOriginKm)
+            return routeDeviationMeters > maximumRouteDeviationMeters
+                || progressDeviationKm > maximumProgressDeviationKm
+        }
+
+        if hasInvalidStop {
+            chargingPlan = nil
+            error = AppError(
+                message: "Certaines bornes proposées sont trop éloignées du parcours prévu. Essayez le mode Éco, désactivez la préférence pour les aires d’autoroute, ou relancez le calcul."
+            )
+        }
+    }
+
+    private func shortestDistanceMeters(
+        from coordinate: CLLocationCoordinate2D,
+        to routeCoordinates: [CLLocationCoordinate2D]
+    ) -> Double {
+        guard routeCoordinates.count >= 2 else { return 0 }
+
+        return zip(routeCoordinates, routeCoordinates.dropFirst())
+            .map { distanceToSegmentMeters(point: coordinate, start: $0.0, end: $0.1) }
+            .min() ?? 0
+    }
+
+    private func distanceToSegmentMeters(
+        point: CLLocationCoordinate2D,
+        start: CLLocationCoordinate2D,
+        end: CLLocationCoordinate2D
+    ) -> Double {
+        let meanLatitudeRadians = ((start.latitude + end.latitude + point.latitude) / 3.0) * .pi / 180.0
+        let metersPerDegreeLatitude = 111_320.0
+        let metersPerDegreeLongitude = max(1.0, cos(meanLatitudeRadians) * 111_320.0)
+
+        let startX = start.longitude * metersPerDegreeLongitude
+        let startY = start.latitude * metersPerDegreeLatitude
+        let endX = end.longitude * metersPerDegreeLongitude
+        let endY = end.latitude * metersPerDegreeLatitude
+        let pointX = point.longitude * metersPerDegreeLongitude
+        let pointY = point.latitude * metersPerDegreeLatitude
+
+        let deltaX = endX - startX
+        let deltaY = endY - startY
+        let lengthSquared = (deltaX * deltaX) + (deltaY * deltaY)
+        guard lengthSquared > 0 else {
+            return hypot(pointX - startX, pointY - startY)
+        }
+
+        let projection = max(
+            0,
+            min(
+                1,
+                ((pointX - startX) * deltaX + (pointY - startY) * deltaY) / lengthSquared
+            )
+        )
+
+        let projectedX = startX + projection * deltaX
+        let projectedY = startY + projection * deltaY
+        return hypot(pointX - projectedX, pointY - projectedY)
     }
 
     @MainActor
