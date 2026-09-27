@@ -92,6 +92,7 @@ struct SettingsView: View {
                 }
             }
             .pickerStyle(.segmented)
+            .accessibilityHint("Le mode Éco réduit la consommation et peut rallonger le trajet.")
 
             Toggle("Éviter les autoroutes", isOn: $appState.settings.routePreferences.avoidHighways)
                 .tint(.orange)

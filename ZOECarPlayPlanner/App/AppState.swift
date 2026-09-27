@@ -99,17 +99,21 @@ final class AppState: ObservableObject {
     // MARK: - Planning
 
     func planRoute(from origin: CLLocationCoordinate2D, to destination: CLLocationCoordinate2D) async {
-        let originPlace = TripPlace(name: "Départ", coordinate: origin)
-        let destinationPlace = TripPlace(name: "Destination", coordinate: destination)
+        let originName = String(format: "%.4f, %.4f", origin.latitude, origin.longitude)
+        let destinationName = String(format: "%.4f, %.4f", destination.latitude, destination.longitude)
+        let originPlace = TripPlace(name: originName, coordinate: origin)
+        let destinationPlace = TripPlace(name: destinationName, coordinate: destination)
         await planTrip(origin: originPlace, destination: destinationPlace, waypoints: [])
     }
 
-    func planTrip(origin: TripPlace, destination: TripPlace, waypoints: [TripPlace]) async {
+    func planTrip(origin: TripPlace, destination: TripPlace, waypoints: [TripPlace], preferences: RoutePreferences? = nil) async {
         isLoading = true
         defer { isLoading = false }
         error = nil
+        chargingPlan = nil
 
         do {
+            let effectivePreferences = preferences ?? settings.routePreferences
             let points = [origin] + waypoints + [destination]
             guard points.count >= 2 else { throw RoutingError.invalidCoordinates }
 
@@ -118,14 +122,13 @@ final class AppState: ObservableObject {
             var weightedHighway = 0.0
             var weightedRoad = 0.0
             var weightedCity = 0.0
-            var routeWaypoints: [RoutePoint] = []
-            var cumulativeDistance = 0.0
+            var segmentDistances: [Double] = []
 
             for index in 0..<(points.count - 1) {
                 let segment = try await routingProvider.calculateRoute(
                     from: points[index].coordinate,
                     to: points[index + 1].coordinate,
-                    preferences: settings.routePreferences
+                    preferences: effectivePreferences
                 )
 
                 totalDistanceKm += segment.totalDistanceKm
@@ -133,17 +136,16 @@ final class AppState: ObservableObject {
                 weightedHighway += segment.roadType.highwayPercent * segment.totalDistanceKm
                 weightedRoad += segment.roadType.roadPercent * segment.totalDistanceKm
                 weightedCity += segment.roadType.cityPercent * segment.totalDistanceKm
+                segmentDistances.append(segment.totalDistanceKm)
+            }
 
-                if index < points.count - 2 {
-                    cumulativeDistance += segment.totalDistanceKm
-                    routeWaypoints.append(
-                        RoutePoint(
-                            name: points[index + 1].name,
-                            coordinate: points[index + 1].coordinate,
-                            distanceFromOriginKm: cumulativeDistance
-                        )
-                    )
-                }
+            let waypointDistances = Self.cumulativeDistances(for: Array(segmentDistances.dropLast()))
+            let routeWaypoints = zip(waypoints, waypointDistances).map { waypoint, distance in
+                RoutePoint(
+                    name: waypoint.name,
+                    coordinate: waypoint.coordinate,
+                    distanceFromOriginKm: distance
+                )
             }
 
             let roadType: RoadTypeDistribution
@@ -164,7 +166,7 @@ final class AppState: ObservableObject {
                 estimatedDurationMinutes: totalDurationMinutes,
                 waypoints: routeWaypoints,
                 roadType: roadType,
-                routePreferences: settings.routePreferences
+                routePreferences: effectivePreferences
             )
             currentRoute = route
 
@@ -172,10 +174,8 @@ final class AppState: ObservableObject {
                 origin: origin,
                 destination: destination,
                 waypoints: waypoints,
-                preferences: settings.routePreferences
+                preferences: effectivePreferences
             )
-            lastPlannedTrip = trip
-            addToHistory(trip)
 
             let stations = try await stationProvider.findStations(
                 along: route,
@@ -188,7 +188,7 @@ final class AppState: ObservableObject {
                 usableBatteryKWh: settings.vehicle.usableBatteryKWh,
                 consumptionWhPerKm: effectiveConsumptionWhPerKm(
                     baseConsumption: settings.consumptionWhPerKm,
-                    mode: settings.routePreferences.mode
+                    mode: effectivePreferences.mode
                 ),
                 distanceKm: route.totalDistanceKm,
                 strategy: ChargingStrategy(
@@ -201,6 +201,8 @@ final class AppState: ObservableObject {
                 roadTypes: route.roadType
             )
             chargingPlan = chargingPlanner.plan(input: input)
+            lastPlannedTrip = trip
+            addToHistory(trip)
         } catch {
             self.error = AppError.from(error)
         }
@@ -208,46 +210,53 @@ final class AppState: ObservableObject {
 
     func relaunchTripFromHistory(_ trip: PlannedTrip) async {
         settings.routePreferences = trip.preferences
-        await planTrip(origin: trip.origin, destination: trip.destination, waypoints: trip.waypoints)
+        await planTrip(origin: trip.origin, destination: trip.destination, waypoints: trip.waypoints, preferences: trip.preferences)
     }
 
     @discardableResult
     func openCurrentTripInMaps(includeChargingStops: Bool = true) -> Bool {
-        let routePlaces: [TripPlace]
-        if let trip = lastPlannedTrip {
-            routePlaces = trip.allPlaces
-        } else if let route = currentRoute {
-            routePlaces = [
-                TripPlace(name: route.origin.name, coordinate: route.origin.coordinate)
-            ] + route.waypoints.map {
-                TripPlace(name: $0.name, coordinate: $0.coordinate)
-            } + [
-                TripPlace(name: route.destination.name, coordinate: route.destination.coordinate)
-            ]
-        } else {
-            return false
+        guard let route = currentRoute else { return false }
+
+        var navigationPoints: [(distance: Double, priority: Int, name: String, coordinate: CLLocationCoordinate2D)] = [
+            (0, 0, route.origin.name, route.origin.coordinate)
+        ]
+
+        for point in route.waypoints {
+            navigationPoints.append((point.distanceFromOriginKm, 0, point.name, point.coordinate))
         }
 
-        var mapItems = routePlaces.map { place in
-            let item = MKMapItem(placemark: MKPlacemark(coordinate: place.coordinate))
-            item.name = place.name
-            return item
-        }
+        navigationPoints.append((route.totalDistanceKm, 0, route.destination.name, route.destination.coordinate))
 
         if includeChargingStops, let plan = chargingPlan {
-            let chargingItems = plan.stops
-                .sorted { $0.distanceFromOriginKm < $1.distanceFromOriginKm }
-                .compactMap { stop -> MKMapItem? in
-                    guard let station = stop.station else { return nil }
-                    let item = MKMapItem(placemark: MKPlacemark(coordinate: station.coordinate))
-                    item.name = station.name
-                    return item
-                }
-
-            if let destinationItem = mapItems.popLast() {
-                mapItems.append(contentsOf: chargingItems)
-                mapItems.append(destinationItem)
+            for stop in plan.stops {
+                guard let station = stop.station else { continue }
+                navigationPoints.append((stop.distanceFromOriginKm, 1, station.name, station.coordinate))
             }
+        }
+
+        let sortedPoints = navigationPoints
+            .sorted {
+                if abs($0.distance - $1.distance) < 0.01 {
+                    return $0.priority < $1.priority
+                }
+                return $0.distance < $1.distance
+            }
+
+        var deduplicatedPoints: [(distance: Double, priority: Int, name: String, coordinate: CLLocationCoordinate2D)] = []
+        for point in sortedPoints {
+            let isDuplicate = deduplicatedPoints.contains {
+                abs($0.coordinate.latitude - point.coordinate.latitude) < 0.0001
+                && abs($0.coordinate.longitude - point.coordinate.longitude) < 0.0001
+            }
+            if !isDuplicate {
+                deduplicatedPoints.append(point)
+            }
+        }
+
+        let mapItems = deduplicatedPoints.map { point -> MKMapItem in
+            let item = MKMapItem(placemark: MKPlacemark(coordinate: point.coordinate))
+            item.name = point.name
+            return item
         }
 
         guard mapItems.count >= 2 else { return false }
@@ -260,6 +269,14 @@ final class AppState: ObservableObject {
 
     // MARK: - Private
 
+    nonisolated static func cumulativeDistances(for segmentDistances: [Double]) -> [Double] {
+        var running = 0.0
+        return segmentDistances.map {
+            running += $0
+            return running
+        }
+    }
+
     private func effectiveConsumptionWhPerKm(baseConsumption: Double, mode: TravelMode) -> Double {
         switch mode {
         case .normal:
@@ -269,6 +286,7 @@ final class AppState: ObservableObject {
         }
     }
 
+    @MainActor
     private func addToHistory(_ trip: PlannedTrip) {
         routeHistory.removeAll(where: { $0.matchesPath(as: trip) })
         routeHistory.insert(trip, at: 0)
@@ -329,6 +347,26 @@ final class AppState: ObservableObject {
 
 private extension PlannedTrip {
     func matchesPath(as other: PlannedTrip) -> Bool {
-        allPlaces.map { $0.name } == other.allPlaces.map { $0.name }
+        guard origin.matches(as: other.origin), destination.matches(as: other.destination) else {
+            return false
+        }
+
+        guard waypoints.count == other.waypoints.count else { return false }
+        for (lhs, rhs) in zip(waypoints, other.waypoints) {
+            if !lhs.matches(as: rhs) {
+                return false
+            }
+        }
+
+        return preferences == other.preferences
+    }
+}
+
+private extension TripPlace {
+    func matches(as other: TripPlace) -> Bool {
+        let sameName = name == other.name
+        let sameLatitude = abs(latitude - other.latitude) < 0.0001
+        let sameLongitude = abs(longitude - other.longitude) < 0.0001
+        return sameName && sameLatitude && sameLongitude
     }
 }

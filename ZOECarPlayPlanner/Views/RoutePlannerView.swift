@@ -39,7 +39,6 @@ struct RoutePlannerView: View {
                 calculateSection
                 loadingSection
                 resultSection
-                recentPlacesSection
                 historySection
             }
             .navigationTitle("Planifier un trajet")
@@ -75,18 +74,40 @@ struct RoutePlannerView: View {
             .foregroundStyle(.primary)
 
             ForEach(Array(waypoints.enumerated()), id: \.element.id) { index, waypoint in
-                Button {
-                    pickerContext = .init(target: .waypoint(index))
-                } label: {
-                    labeledPlaceRow(title: "Étape \(index + 1)", place: waypoint)
+                HStack(spacing: 8) {
+                    Button {
+                        pickerContext = .init(target: .waypoint(waypoint.id))
+                    } label: {
+                        labeledPlaceRow(title: "Étape \(index + 1)", place: waypoint)
+                    }
+                    .buttonStyle(.plain)
+
+                    Button {
+                        moveWaypoint(at: index, offset: -1)
+                    } label: {
+                        Image(systemName: "chevron.up")
+                    }
+                    .buttonStyle(.borderless)
+                    .accessibilityLabel("Monter cette étape")
+                    .disabled(index == 0)
+
+                    Button {
+                        moveWaypoint(at: index, offset: 1)
+                    } label: {
+                        Image(systemName: "chevron.down")
+                    }
+                    .buttonStyle(.borderless)
+                    .accessibilityLabel("Descendre cette étape")
+                    .disabled(index == waypoints.count - 1)
+
+                    Button(role: .destructive) {
+                        removeWaypoint(at: index)
+                    } label: {
+                        Image(systemName: "trash")
+                    }
+                    .buttonStyle(.borderless)
+                    .accessibilityLabel("Supprimer cette étape")
                 }
-                .foregroundStyle(.primary)
-            }
-            .onDelete { offsets in
-                waypoints.remove(atOffsets: offsets)
-            }
-            .onMove { source, destination in
-                waypoints.move(fromOffsets: source, toOffset: destination)
             }
 
             Button {
@@ -107,6 +128,7 @@ struct RoutePlannerView: View {
                 }
             }
             .pickerStyle(.segmented)
+            .accessibilityHint("Le mode Éco réduit la consommation et peut allonger la durée du trajet.")
 
             Toggle("Éviter les autoroutes", isOn: $appState.settings.routePreferences.avoidHighways)
                 .tint(.orange)
@@ -133,7 +155,7 @@ struct RoutePlannerView: View {
             } label: {
                 Label("Calculer le trajet", systemImage: "arrow.triangle.branch")
             }
-            .disabled(selectedOrigin.id == selectedDestination.id)
+            .disabled(samePlace(selectedOrigin, selectedDestination))
 
             if appState.settings.routePreferences != RoutePreferences() {
                 Label(appState.settings.routePreferences.summaryText, systemImage: "leaf")
@@ -179,22 +201,6 @@ struct RoutePlannerView: View {
     }
 
     @ViewBuilder
-    private var recentPlacesSection: some View {
-        if !appState.recentPlaces.isEmpty {
-            Section("Lieux récents") {
-                ForEach(Array(appState.recentPlaces.prefix(5))) { place in
-                    Button {
-                        selectedDestination = place
-                    } label: {
-                        Label(place.name, systemImage: "clock.arrow.circlepath")
-                    }
-                    .foregroundStyle(.primary)
-                }
-            }
-        }
-    }
-
-    @ViewBuilder
     private var historySection: some View {
         if !appState.routeHistory.isEmpty {
             Section("Historique des recherches") {
@@ -203,6 +209,7 @@ struct RoutePlannerView: View {
                         selectedOrigin = trip.origin
                         selectedDestination = trip.destination
                         waypoints = trip.waypoints
+                        appState.settings.routePreferences = trip.preferences
                         Task {
                             await appState.relaunchTripFromHistory(trip)
                         }
@@ -233,6 +240,22 @@ struct RoutePlannerView: View {
         }
     }
 
+    private func samePlace(_ lhs: TripPlace, _ rhs: TripPlace) -> Bool {
+        abs(lhs.latitude - rhs.latitude) < 0.0001
+        && abs(lhs.longitude - rhs.longitude) < 0.0001
+    }
+
+    private func moveWaypoint(at index: Int, offset: Int) {
+        let target = index + offset
+        guard waypoints.indices.contains(index), waypoints.indices.contains(target) else { return }
+        waypoints.swapAt(index, target)
+    }
+
+    private func removeWaypoint(at index: Int) {
+        guard waypoints.indices.contains(index) else { return }
+        waypoints.remove(at: index)
+    }
+
     private func applySelection(_ place: TripPlace, for target: LocationPickerTarget) {
         switch target {
         case .origin:
@@ -241,8 +264,8 @@ struct RoutePlannerView: View {
             selectedDestination = place
         case .newWaypoint:
             waypoints.append(place)
-        case .waypoint(let index):
-            guard waypoints.indices.contains(index) else { return }
+        case .waypoint(let waypointID):
+            guard let index = waypoints.firstIndex(where: { $0.id == waypointID }) else { return }
             waypoints[index] = place
         }
     }
@@ -257,7 +280,7 @@ private enum LocationPickerTarget {
     case origin
     case destination
     case newWaypoint
-    case waypoint(Int)
+    case waypoint(UUID)
 
     var title: String {
         switch self {
@@ -267,8 +290,8 @@ private enum LocationPickerTarget {
             return "Choisir la destination"
         case .newWaypoint:
             return "Ajouter une étape"
-        case .waypoint(let index):
-            return "Modifier l'étape \(index + 1)"
+        case .waypoint:
+            return "Modifier une étape"
         }
     }
 }
@@ -304,6 +327,7 @@ private struct LocationPickerSheet: View {
                                 dismiss()
                             }
                             .foregroundStyle(.primary)
+                            .accessibilityLabel("Récent : \(place.name)")
                         }
                     }
                 }
@@ -315,6 +339,7 @@ private struct LocationPickerSheet: View {
                             dismiss()
                         }
                         .foregroundStyle(.primary)
+                        .accessibilityLabel("Ville : \(place.name)")
                     }
                 }
             }

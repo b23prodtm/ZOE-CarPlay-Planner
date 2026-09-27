@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ChargingPlanView: View {
     @EnvironmentObject var appState: AppState
+    @State private var showNavigationError = false
 
     var body: some View {
         NavigationStack {
@@ -20,6 +21,11 @@ struct ChargingPlanView: View {
                 }
             }
             .navigationTitle("Plan de recharge")
+            .alert("Navigation indisponible", isPresented: $showNavigationError) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text("Impossible d'ouvrir Plans pour ce trajet.")
+            }
         }
     }
 
@@ -36,9 +42,11 @@ struct ChargingPlanView: View {
                 }
 
                 Button {
-                    _ = appState.openCurrentTripInMaps(includeChargingStops: true)
+                    if !appState.openCurrentTripInMaps(includeChargingStops: true) {
+                        showNavigationError = true
+                    }
                 } label: {
-                    Label("Ouvrir dans Plans (CarPlay inclus)", systemImage: "carplay")
+                    Label("Ouvrir dans Plans (CarPlay inclus)", systemImage: "map.fill")
                 }
                 .foregroundStyle(.blue)
             }
