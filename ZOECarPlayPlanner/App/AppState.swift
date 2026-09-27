@@ -67,8 +67,8 @@ final class AppState: ObservableObject {
     }
 
     /// Déconnecte du compte Renault et repasse en simulation.
-    func disconnectRenault() {
-        auth.clearCredentials()
+    func disconnectRenault() async {
+        await auth.clearCredentials()
         realService = nil
         settings.useSimulationMode = true
         settings.save()

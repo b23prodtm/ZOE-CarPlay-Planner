@@ -54,7 +54,7 @@ actor RenaultAPIClient {
     // MARK: - Private helpers
 
     private func buildRequest(method: String, path: String, body: Data?) async throws -> URLRequest {
-        let token = try await auth.validToken()
+        _ = try await auth.validToken()
         guard let url = URL(string: Endpoint.kamereonBase + path) else {
             throw RenaultServiceError.unknownError("URL invalide : \(path)")
         }

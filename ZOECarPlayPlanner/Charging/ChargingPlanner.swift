@@ -33,7 +33,7 @@ struct ChargingPlanner: Sendable {
         while traveledKm < input.distanceKm {
             let remainingDistance = input.distanceKm - traveledKm
             let energyAvailable = (remainingSOC / 100.0) * input.usableBatteryKWh
-            let maxRangeKm = energyAvailable / (effectiveConsumption / 1000.0)
+            _ = energyAvailable / (effectiveConsumption / 1000.0)
 
             // Distance maximale avant d'atteindre le seuil de déclenchement
             let energyAtTrigger = (input.strategy.triggerSOCPercent / 100.0) * input.usableBatteryKWh
