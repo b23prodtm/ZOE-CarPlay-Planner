@@ -24,7 +24,7 @@ struct ChargingPlanView: View {
             .alert("Navigation indisponible", isPresented: $showNavigationError) {
                 Button("OK", role: .cancel) { }
             } message: {
-                Text("Impossible d'ouvrir Plans pour ce trajet.")
+                Text("Impossible d'ouvrir Plans et la navigation CarPlay pour ce trajet.")
             }
         }
     }

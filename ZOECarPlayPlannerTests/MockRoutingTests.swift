@@ -176,6 +176,33 @@ final class MockRoutingTests: XCTestCase {
     }
 
 
+
+    func test_stationMapSymbol_matchesHighwayType() {
+        let highway = ChargingStation(
+            id: UUID(),
+            name: "Aire",
+            coordinate: lyon,
+            operatorName: "Ionity",
+            connectors: [],
+            isAvailable: true,
+            distanceFromRouteKm: 100,
+            isHighway: true
+        )
+        let local = ChargingStation(
+            id: UUID(),
+            name: "Ville",
+            coordinate: paris,
+            operatorName: "Local",
+            connectors: [],
+            isAvailable: true,
+            distanceFromRouteKm: 120,
+            isHighway: false
+        )
+
+        XCTAssertEqual(highway.mapSymbolName, "road.lanes")
+        XCTAssertEqual(local.mapSymbolName, "bolt.fill")
+    }
+
     func test_stationProvider_prefersHighwayStationsWhenHighwaysAllowed() async throws {
         let provider = MockChargingStationProvider()
         let route = Route(
@@ -190,6 +217,24 @@ final class MockRoutingTests: XCTestCase {
 
         XCTAssertFalse(stations.isEmpty)
         XCTAssertTrue(stations.allSatisfy { $0.isHighway == true })
+        XCTAssertTrue(stations.allSatisfy { $0.name.contains("Aire autoroute") })
+        XCTAssertTrue(stations.allSatisfy { $0.operatorName == "Ionity Autoroute" })
+    }
+
+
+    func test_stationProvider_shortRoute_returnsNoStations() async throws {
+        let provider = MockChargingStationProvider()
+        let route = Route(
+            origin: RoutePoint(name: "Lyon", coordinate: lyon),
+            destination: RoutePoint(name: "Proche", coordinate: CLLocationCoordinate2D(latitude: 45.90, longitude: 4.90), distanceFromOriginKm: 60),
+            totalDistanceKm: 60,
+            estimatedDurationMinutes: 50,
+            routePreferences: RoutePreferences(avoidHighways: false)
+        )
+
+        let stations = try await provider.findStations(along: route, connectorTypes: Vehicle.defaultZOE.connectorTypes)
+
+        XCTAssertTrue(stations.isEmpty)
     }
 
     func test_stationProvider_usesNonHighwayStationsWhenAvoidHighways() async throws {
@@ -206,6 +251,8 @@ final class MockRoutingTests: XCTestCase {
 
         XCTAssertFalse(stations.isEmpty)
         XCTAssertTrue(stations.allSatisfy { $0.isHighway == false })
+        XCTAssertTrue(stations.allSatisfy { $0.name.contains("Borne urbaine") })
+        XCTAssertTrue(stations.allSatisfy { $0.operatorName == "Réseau local" })
     }
 
     func test_route_originCoordinatePreserved() async throws {

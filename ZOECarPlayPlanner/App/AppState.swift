@@ -184,6 +184,8 @@ final class AppState: ObservableObject {
                 connectorTypes: settings.vehicle.connectorTypes
             )
             availableStationsOnRoute = stations
+            lastPlannedTrip = trip
+            addToHistory(trip)
 
             guard let status = vehicleStatus else { return }
             let input = ChargingPlannerInput(
@@ -204,8 +206,6 @@ final class AppState: ObservableObject {
                 roadTypes: route.roadType
             )
             chargingPlan = chargingPlanner.plan(input: input)
-            lastPlannedTrip = trip
-            addToHistory(trip)
         } catch {
             self.error = AppError.from(error)
         }
@@ -245,22 +245,47 @@ final class AppState: ObservableObject {
                 return $0.distance < $1.distance
             }
 
-        var deduplicatedPoints: [(distance: Double, priority: Int, name: String, coordinate: CLLocationCoordinate2D)] = []
-        for point in sortedPoints {
-            let isDuplicate = deduplicatedPoints.contains {
+        var mandatoryPoints = sortedPoints.filter { $0.priority == 0 }
+        var optionalPoints: [(distance: Double, priority: Int, name: String, coordinate: CLLocationCoordinate2D)] = []
+
+        for point in sortedPoints where point.priority == 1 {
+            if let mandatoryIndex = mandatoryPoints.firstIndex(where: {
+                abs($0.coordinate.latitude - point.coordinate.latitude) < 0.0001
+                && abs($0.coordinate.longitude - point.coordinate.longitude) < 0.0001
+            }) {
+                mandatoryPoints[mandatoryIndex].name += " • \(point.name)"
+                continue
+            }
+
+            let duplicateOptional = optionalPoints.contains {
                 abs($0.coordinate.latitude - point.coordinate.latitude) < 0.0001
                 && abs($0.coordinate.longitude - point.coordinate.longitude) < 0.0001
             }
-            if !isDuplicate {
-                deduplicatedPoints.append(point)
+            if !duplicateOptional {
+                optionalPoints.append(point)
             }
         }
 
-        let mapItems = deduplicatedPoints.map { point -> MKMapItem in
-            let item = MKMapItem(placemark: MKPlacemark(coordinate: point.coordinate))
-            item.name = point.name
-            return item
+        let maxMapItems = 10
+
+        var limitedPoints = mandatoryPoints.sorted { $0.distance < $1.distance }
+        guard limitedPoints.count <= maxMapItems else {
+            return false
         }
+
+        if limitedPoints.count < maxMapItems {
+            let availableSlots = maxMapItems - limitedPoints.count
+            limitedPoints.append(contentsOf: optionalPoints.prefix(availableSlots))
+        }
+
+        let mapItems = limitedPoints
+            .sorted { $0.distance < $1.distance }
+            .prefix(maxMapItems)
+            .map { point -> MKMapItem in
+                let item = MKMapItem(placemark: MKPlacemark(coordinate: point.coordinate))
+                item.name = point.name
+                return item
+            }
 
         guard mapItems.count >= 2 else { return false }
         MKMapItem.openMaps(
@@ -268,6 +293,20 @@ final class AppState: ObservableObject {
             launchOptions: [MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving]
         )
         return true
+    }
+
+    func setAvoidHighways(_ isEnabled: Bool) {
+        settings.routePreferences.avoidHighways = isEnabled
+        if isEnabled {
+            settings.routePreferences.preferHighways = false
+        }
+    }
+
+    func setPreferHighways(_ isEnabled: Bool) {
+        settings.routePreferences.preferHighways = isEnabled
+        if isEnabled {
+            settings.routePreferences.avoidHighways = false
+        }
     }
 
     // MARK: - Private

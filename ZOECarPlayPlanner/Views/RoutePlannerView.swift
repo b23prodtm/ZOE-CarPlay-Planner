@@ -101,7 +101,7 @@ struct RoutePlannerView: View {
                     subtitle: station.locationTypeLabel,
                     coordinate: station.coordinate,
                     tint: station.isHighway == true ? .green : .orange,
-                    symbol: station.isHighway == true ? "road.lanes" : "bolt.fill"
+                    symbol: station.mapSymbolName
                 )
             )
         }
@@ -109,11 +109,7 @@ struct RoutePlannerView: View {
         return points
     }
 
-    private var mapPointsSignature: String {
-        mapPoints
-            .map { "\($0.id)-\(Int($0.coordinate.latitude * 10000))-\(Int($0.coordinate.longitude * 10000))" }
-            .joined(separator: "|")
-    }
+
 
     var body: some View {
         NavigationStack {
@@ -139,9 +135,10 @@ struct RoutePlannerView: View {
                 )
             }
             .onAppear(perform: updateMapRegion)
-            .onChange(of: mapPointsSignature) { _, _ in
-                updateMapRegion()
-            }
+            .onChange(of: selectedOrigin) { _, _ in updateMapRegion() }
+            .onChange(of: selectedDestination) { _, _ in updateMapRegion() }
+            .onChange(of: waypoints) { _, _ in updateMapRegion() }
+            .onChange(of: appState.availableStationsOnRoute.map { "\($0.id.uuidString)-\($0.coordinate.latitude)-\($0.coordinate.longitude)" }) { _, _ in updateMapRegion() }
         }
     }
 
@@ -170,6 +167,8 @@ struct RoutePlannerView: View {
                         labeledPlaceRow(title: "Étape \(index + 1)", place: waypoint)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("Étape \(index + 1)")
+                    .accessibilityValue(waypoint.name)
 
                     Button {
                         moveWaypoint(at: index, offset: -1)
@@ -218,7 +217,7 @@ struct RoutePlannerView: View {
             if !destinationSuggestions.isEmpty {
                 ForEach(destinationSuggestions) { place in
                     Button {
-                        selectedDestination = place
+                        applySelection(place, for: .destination)
                         destinationSearchText = ""
                     } label: {
                         Label(place.name, systemImage: "magnifyingglass")
@@ -240,12 +239,26 @@ struct RoutePlannerView: View {
             .pickerStyle(.segmented)
             .accessibilityHint("Le mode Éco réduit la consommation et peut allonger la durée du trajet.")
 
-            Toggle("Éviter les autoroutes", isOn: $appState.settings.routePreferences.avoidHighways)
-                .tint(.orange)
+            Toggle(
+                "Éviter les autoroutes",
+                isOn: Binding(
+                    get: { appState.settings.routePreferences.avoidHighways },
+                    set: { appState.setAvoidHighways($0) }
+                )
+            )
+            .tint(.orange)
+
             Toggle("Éviter les péages", isOn: $appState.settings.routePreferences.avoidTolls)
                 .tint(.orange)
-            Toggle("Préférer les autoroutes", isOn: $appState.settings.routePreferences.preferHighways)
-                .tint(.green)
+
+            Toggle(
+                "Préférer les autoroutes",
+                isOn: Binding(
+                    get: { appState.settings.routePreferences.preferHighways },
+                    set: { appState.setPreferHighways($0) }
+                )
+            )
+            .tint(.green)
             Toggle("Préférer les routes pittoresques", isOn: $appState.settings.routePreferences.preferScenic)
                 .tint(.purple)
         }
@@ -305,21 +318,47 @@ struct RoutePlannerView: View {
                             .font(.caption2)
                             .lineLimit(1)
                     }
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("\(point.title), \(point.subtitle)")
+                    .accessibilityValue("Repère de carte")
+                    .accessibilityAddTraits(.isImage)
                 }
             }
             .frame(height: 280)
             .clipShape(RoundedRectangle(cornerRadius: 10))
+
+            Button {
+                updateMapRegion()
+            } label: {
+                Label("Ajuster la carte au trajet", systemImage: "scope")
+            }
+            .foregroundStyle(.blue)
 
             if !appState.availableStationsOnRoute.isEmpty {
                 Text("Bornes visibles sur la carte : \(appState.availableStationsOnRoute.count)")
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
-                ForEach(Array(appState.availableStationsOnRoute.prefix(4))) { station in
+                ForEach(appState.availableStationsOnRoute) { station in
                     HStack {
-                        Label(station.name, systemImage: station.isHighway == true ? "road.lanes" : "bolt.fill")
+                        Label(station.name, systemImage: station.mapSymbolName)
                         Spacer()
                         Text(station.locationTypeLabel)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+
+            if !mapPoints.isEmpty {
+                Text("Points affichés")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                ForEach(mapPoints) { point in
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(point.title)
+                        Text(point.subtitle)
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -415,7 +454,8 @@ struct RoutePlannerView: View {
             waypoints.append(place)
         case .waypoint(let waypointID):
             guard let index = waypoints.firstIndex(where: { $0.id == waypointID }) else { return }
-            waypoints[index] = place
+            let existingID = waypoints[index].id
+            waypoints[index] = TripPlace(id: existingID, name: place.name, coordinate: place.coordinate)
         }
     }
 

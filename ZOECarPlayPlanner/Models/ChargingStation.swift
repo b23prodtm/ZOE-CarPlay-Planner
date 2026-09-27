@@ -27,6 +27,10 @@ struct ChargingStation: Identifiable, Sendable {
         if isHighway == false { return "Hors autoroute" }
         return "Type inconnu"
     }
+
+    var mapSymbolName: String {
+        isHighway == true ? "road.lanes" : "bolt.fill"
+    }
 }
 
 // MARK: - StationConnector

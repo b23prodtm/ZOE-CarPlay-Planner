@@ -94,14 +94,26 @@ struct SettingsView: View {
             .pickerStyle(.segmented)
             .accessibilityHint("Le mode Éco réduit la consommation et peut rallonger le trajet.")
 
-            Toggle("Éviter les autoroutes", isOn: $appState.settings.routePreferences.avoidHighways)
-                .tint(.orange)
+            Toggle(
+                "Éviter les autoroutes",
+                isOn: Binding(
+                    get: { appState.settings.routePreferences.avoidHighways },
+                    set: { appState.setAvoidHighways($0) }
+                )
+            )
+            .tint(.orange)
 
             Toggle("Éviter les péages", isOn: $appState.settings.routePreferences.avoidTolls)
                 .tint(.orange)
 
-            Toggle("Préférer les autoroutes", isOn: $appState.settings.routePreferences.preferHighways)
-                .tint(.green)
+            Toggle(
+                "Préférer les autoroutes",
+                isOn: Binding(
+                    get: { appState.settings.routePreferences.preferHighways },
+                    set: { appState.setPreferHighways($0) }
+                )
+            )
+            .tint(.green)
 
             Toggle("Préférer les routes pittoresques", isOn: $appState.settings.routePreferences.preferScenic)
                 .tint(.purple)
