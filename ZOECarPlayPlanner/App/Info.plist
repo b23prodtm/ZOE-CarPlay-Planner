@@ -30,6 +30,17 @@
 		<true/>
 		<key>UISceneConfigurations</key>
 		<dict>
+			<key>CPTemplateApplicationSceneSessionRoleApplication</key>
+			<array>
+				<dict>
+					<key>UISceneClassName</key>
+					<string>CPTemplateApplicationScene</string>
+					<key>UISceneConfigurationName</key>
+					<string>CarPlay Configuration</string>
+					<key>UISceneDelegateClassName</key>
+					<string>$(PRODUCT_MODULE_NAME).CarPlaySceneDelegate</string>
+				</dict>
+			</array>
 			<key>UIWindowSceneSessionRoleApplication</key>
 			<array>
 				<dict>
@@ -39,30 +50,6 @@
 					<string>Default Configuration</string>
 					<key>UISceneDelegateClassName</key>
 					<string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>
-				</dict>
-			</array>
-			<!--
-				CarPlay scene.
-				PRÉREQUIS : L'entitlement Apple doit être accordé AVANT d'activer ce bloc.
-				Demander l'accès sur : https://developer.apple.com/carplay/
-				  - Navigation : com.apple.developer.carplay-navigation
-				  - Information : com.apple.developer.carplay-information
-				
-				Ajouter l'entitlement dans le fichier ZOECarPlayPlanner.entitlements :
-				  <key>com.apple.developer.carplay-information</key>
-				  <true/>
-				
-				Ensuite décommenter le bloc ci-dessous et supprimer ce commentaire.
-			-->
-			<key>CPTemplateApplicationSceneSessionRoleApplication</key>
-			<array>
-				<dict>
-					<key>UISceneClassName</key>
-					<string>CPTemplateApplicationScene</string>
-					<key>UISceneDelegateClassName</key>
-					<string>$(PRODUCT_MODULE_NAME).CarPlaySceneDelegate</string>
-					<key>UISceneConfigurationName</key>
-					<string>CarPlay Configuration</string>
 				</dict>
 			</array>
 		</dict>
@@ -75,9 +62,10 @@
 	</array>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
-		<string>UIInterfaceOrientationPortrait</string>
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
 	</array>
 </dict>
 </plist>
