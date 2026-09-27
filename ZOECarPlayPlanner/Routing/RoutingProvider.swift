@@ -6,8 +6,23 @@ import CoreLocation
 protocol RoutingProvider: Sendable {
     func calculateRoute(
         from origin: CLLocationCoordinate2D,
+        to destination: CLLocationCoordinate2D,
+        preferences: RoutePreferences
+    ) async throws -> Route
+
+    func calculateRoute(
+        from origin: CLLocationCoordinate2D,
         to destination: CLLocationCoordinate2D
     ) async throws -> Route
+}
+
+extension RoutingProvider {
+    func calculateRoute(
+        from origin: CLLocationCoordinate2D,
+        to destination: CLLocationCoordinate2D
+    ) async throws -> Route {
+        try await calculateRoute(from: origin, to: destination, preferences: .init())
+    }
 }
 
 // MARK: - RoutingError
