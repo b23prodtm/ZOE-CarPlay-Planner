@@ -10,18 +10,30 @@ import UIKit
 @MainActor
 final class CarPlayCoordinator {
     private let interfaceController: CPInterfaceController
+    private let itineraryDestinationProvider: () -> MKMapItem?
 
     private lazy var mapTemplate: CPMapTemplate = {
         let template = CPMapTemplate()
-        template.mapButtons = [
+        var buttons = [
             makeSettingsButton(),
-            makeSendRouteButton()
         ]
+#if DEBUG
+        buttons.append(makeSendRouteButton())
+#else
+        if itineraryDestinationProvider() != nil {
+            buttons.append(makeSendRouteButton())
+        }
+#endif
+        template.mapButtons = buttons
         return template
     }()
 
-    init(interfaceController: CPInterfaceController) {
+    init(
+        interfaceController: CPInterfaceController,
+        itineraryDestinationProvider: @escaping () -> MKMapItem? = { nil }
+    ) {
         self.interfaceController = interfaceController
+        self.itineraryDestinationProvider = itineraryDestinationProvider
     }
 
     // MARK: - Root Template
@@ -64,13 +76,30 @@ final class CarPlayCoordinator {
 
     // MARK: - Apple Maps
 
-    private func sendTestRouteToAppleMaps() {
-        let destinationCoordinate = CLLocationCoordinate2D(latitude: 48.8566, longitude: 2.3522)
-        let destinationPlacemark = MKPlacemark(coordinate: destinationCoordinate)
-        let destinationItem = MKMapItem(placemark: destinationPlacemark)
-        destinationItem.name = "Station de recharge de test"
+    func sendRoute(to destinationItem: MKMapItem) {
         destinationItem.openInMaps(launchOptions: [
             MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving
         ])
     }
+
+    private func sendTestRouteToAppleMaps() {
+        if let destinationItem = itineraryDestinationProvider() {
+            sendRoute(to: destinationItem)
+            return
+        }
+
+#if DEBUG
+        sendRoute(to: makeDebugDestinationItem())
+#endif
+    }
+
+#if DEBUG
+    private func makeDebugDestinationItem() -> MKMapItem {
+        let destinationCoordinate = CLLocationCoordinate2D(latitude: 48.8566, longitude: 2.3522)
+        let destinationPlacemark = MKPlacemark(coordinate: destinationCoordinate)
+        let destinationItem = MKMapItem(placemark: destinationPlacemark)
+        destinationItem.name = "Station de recharge de test"
+        return destinationItem
+    }
+#endif
 }
