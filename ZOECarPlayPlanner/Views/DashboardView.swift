@@ -17,6 +17,18 @@ struct DashboardView: View {
         return MKPolyline(coordinates: coordinates, count: coordinates.count)
     }
 
+    private struct VerticalSOCSlider: View {
+        @Binding var value: Double
+
+        var body: some View {
+            Slider(value: $value, in: 0...100, step: 1)
+                .tint(.green)
+                .rotationEffect(.degrees(-90))
+                .frame(width: 140)
+                .padding(.vertical, 28)
+        }
+    }
+
     private var dashboardMapPoints: [DashboardMapPoint] {
         var points: [DashboardMapPoint] = []
 
@@ -106,10 +118,11 @@ struct DashboardView: View {
 
                 VStack(spacing: 16) {
                     headerCard
+                    modeSection
                     Spacer()
                     statusSection
                     actionSection
-                    simulationBadge
+                    modeBadge
                 }
                 .padding()
             }
@@ -130,6 +143,52 @@ struct DashboardView: View {
                 Button("OK") { appState.error = nil }
             } message: {
                 Text(appState.error?.message ?? "")
+            }
+        }
+
+        @ViewBuilder
+        var manualSOCControl: some View {
+            if appState.settings.manualSOCSliderLayout == .vertical {
+                HStack(alignment: .center, spacing: 16) {
+                    VerticalSOCSlider(value: Binding(
+                        get: { appState.settings.simulatedSOCPercent },
+                        set: { newValue in
+                            appState.settings.simulatedSOCPercent = newValue
+                            Task { await appState.updateManualSOC(newValue) }
+                        }
+                    ))
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("SOC manuel")
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                        Text("\(Int(appState.settings.simulatedSOCPercent)) %")
+                            .font(.title3.weight(.semibold))
+                            .foregroundStyle(.white)
+                    }
+                    Spacer()
+                }
+                .padding()
+                .frame(maxWidth: .infinity, minHeight: 160)
+                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 18))
+            } else {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text("SOC manuel")
+                        Spacer()
+                        Text("\(Int(appState.settings.simulatedSOCPercent)) %")
+                    }
+                    .foregroundStyle(.white)
+                    Slider(value: Binding(
+                        get: { appState.settings.simulatedSOCPercent },
+                        set: { newValue in
+                            appState.settings.simulatedSOCPercent = newValue
+                            Task { await appState.updateManualSOC(newValue) }
+                        }
+                    ), in: 0...100, step: 1)
+                    .tint(.green)
+                }
+                .padding()
+                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 18))
             }
         }
     }
@@ -187,11 +246,43 @@ private extension DashboardView {
                 .frame(maxWidth: .infinity)
                 .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20))
         } else {
-            Text("Appuyez sur Actualiser GPS et trajet")
+            Text(appState.settings.useSimulationMode ? "Réglez le SOC manuellement ou passez en mode Auto." : "Connectez MyRenault pour récupérer le SOC et la position.")
                 .foregroundStyle(.white)
                 .padding()
                 .frame(maxWidth: .infinity)
                 .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20))
+        }
+    }
+
+    var modeSection: some View {
+        VStack(spacing: 12) {
+            Picker("Mode", selection: Binding(
+                get: { appState.settings.useSimulationMode },
+                set: { isManualMode in
+                    Task { await appState.setManualModeEnabled(isManualMode) }
+                }
+            )) {
+                Text("Manuel").tag(true)
+                Text("Auto").tag(false)
+            }
+            .pickerStyle(.segmented)
+            .padding(8)
+            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
+
+            if appState.settings.useSimulationMode {
+                manualSOCControl
+            } else if !appState.isAuthenticated {
+                NavigationLink {
+                    SettingsView()
+                } label: {
+                    Label("Connexion via MyRenault", systemImage: "person.badge.key.fill")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(.white.opacity(0.18), in: RoundedRectangle(cornerRadius: 16))
+                        .foregroundStyle(.white)
+                }
+            }
         }
     }
 
@@ -237,9 +328,16 @@ private extension DashboardView {
     }
 
     @ViewBuilder
-    var simulationBadge: some View {
+    var modeBadge: some View {
         if appState.settings.useSimulationMode {
-            Label("Mode simulation actif", systemImage: "cpu")
+            Label("Mode manuel actif", systemImage: "slider.horizontal.3")
+                .font(.caption)
+                .foregroundStyle(.white)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(.black.opacity(0.35), in: Capsule())
+        } else if appState.isAuthenticated {
+            Label("Mode auto connecté", systemImage: "antenna.radiowaves.left.and.right")
                 .font(.caption)
                 .foregroundStyle(.white)
                 .padding(.horizontal, 12)

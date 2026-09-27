@@ -14,7 +14,7 @@ struct AppConfig {
 
     // MARK: - Renault API (optionnel)
     /// VIN (numéro de châssis) du véhicule réel.
-    /// Laisser vide pour utiliser le mode simulation.
+    /// Laisser vide pour rester en mode manuel.
     static let vehicleVIN: String = ""
 
     // MARK: - Renault compte (optionnel)

@@ -17,6 +17,7 @@ final class PlannerSettings: ObservableObject, Codable {
     @Published var selectedChargingNetworks: [ChargingNetwork]
     @Published var selectedConnectorTypes: [ConnectorType]
     @Published var preferHighwayStations: Bool
+    @Published var manualSOCSliderLayout: ManualSOCSliderLayout
     @Published var preferredNavigationApp: PreferredNavigationApp
     @Published var dashboardWallpaperFilename: String?
 
@@ -33,6 +34,7 @@ final class PlannerSettings: ObservableObject, Codable {
         selectedChargingNetworks: [ChargingNetwork] = ChargingNetwork.allCases,
         selectedConnectorTypes: [ConnectorType] = [.type2AC, .ccs],
         preferHighwayStations: Bool = true,
+        manualSOCSliderLayout: ManualSOCSliderLayout = .centered,
         preferredNavigationApp: PreferredNavigationApp = .appleMaps,
         dashboardWallpaperFilename: String? = nil
     ) {
@@ -48,6 +50,7 @@ final class PlannerSettings: ObservableObject, Codable {
         self.selectedChargingNetworks = selectedChargingNetworks
         self.selectedConnectorTypes = selectedConnectorTypes
         self.preferHighwayStations = preferHighwayStations
+        self.manualSOCSliderLayout = manualSOCSliderLayout
         self.preferredNavigationApp = preferredNavigationApp
         self.dashboardWallpaperFilename = dashboardWallpaperFilename
     }
@@ -58,7 +61,7 @@ final class PlannerSettings: ObservableObject, Codable {
         case consumptionWhPerKm, minBatteryAtArrivalPercent, maxBatteryAfterChargePercent
         case safetyMarginPercent, preferredChargingPowerKW, useSimulationMode
         case simulatedSOCPercent, vehicle, routePreferences, selectedChargingNetworks
-        case selectedConnectorTypes, preferHighwayStations, preferredNavigationApp, dashboardWallpaperFilename
+        case selectedConnectorTypes, preferHighwayStations, manualSOCSliderLayout, preferredNavigationApp, dashboardWallpaperFilename
     }
 
     required init(from decoder: Decoder) throws {
@@ -75,6 +78,7 @@ final class PlannerSettings: ObservableObject, Codable {
         selectedChargingNetworks = try c.decodeIfPresent([ChargingNetwork].self, forKey: .selectedChargingNetworks) ?? ChargingNetwork.allCases
         selectedConnectorTypes = try c.decodeIfPresent([ConnectorType].self, forKey: .selectedConnectorTypes) ?? [.type2AC, .ccs]
         preferHighwayStations = try c.decodeIfPresent(Bool.self, forKey: .preferHighwayStations) ?? true
+        manualSOCSliderLayout = try c.decodeIfPresent(ManualSOCSliderLayout.self, forKey: .manualSOCSliderLayout) ?? .centered
         preferredNavigationApp = try c.decodeIfPresent(PreferredNavigationApp.self, forKey: .preferredNavigationApp) ?? .appleMaps
         dashboardWallpaperFilename = try c.decodeIfPresent(String.self, forKey: .dashboardWallpaperFilename)
     }
@@ -93,6 +97,7 @@ final class PlannerSettings: ObservableObject, Codable {
         try c.encode(selectedChargingNetworks, forKey: .selectedChargingNetworks)
         try c.encode(selectedConnectorTypes, forKey: .selectedConnectorTypes)
         try c.encode(preferHighwayStations, forKey: .preferHighwayStations)
+        try c.encode(manualSOCSliderLayout, forKey: .manualSOCSliderLayout)
         try c.encode(preferredNavigationApp, forKey: .preferredNavigationApp)
         try c.encodeIfPresent(dashboardWallpaperFilename, forKey: .dashboardWallpaperFilename)
     }
@@ -141,6 +146,20 @@ enum PreferredNavigationApp: String, Codable, CaseIterable, Sendable {
         case .googleMaps: return "Google Maps"
         case .waze: return "Waze"
         case .roole: return "Roole"
+        }
+    }
+}
+
+enum ManualSOCSliderLayout: String, Codable, CaseIterable, Sendable {
+    case centered
+    case vertical
+
+    var displayName: String {
+        switch self {
+        case .centered:
+            return "Horizontal (centre)"
+        case .vertical:
+            return "Vertical"
         }
     }
 }

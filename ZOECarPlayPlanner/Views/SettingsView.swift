@@ -3,7 +3,6 @@ import PhotosUI
 
 struct SettingsView: View {
     @EnvironmentObject var appState: AppState
-    @State private var selectedScenario: SimulationScenario = .high
 
     // Renault login form
     @State private var emailInput: String = ""
@@ -17,8 +16,9 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
+                operatingModeSection
                 renaultSection
-                simulationSection
+                manualModeSection
                 consumptionSection
                 chargingStrategySection
                 routePreferencesSection
@@ -44,9 +44,33 @@ struct SettingsView: View {
             .onChange(of: appState.settings.preferredNavigationApp) { _, _ in
                 appState.settings.save()
             }
+            .onChange(of: appState.settings.manualSOCSliderLayout) { _, _ in
+                appState.settings.save()
+            }
             .onAppear {
                 appState.refreshAvailableNavigationApps()
             }
+        }
+    }
+
+    @ViewBuilder private var operatingModeSection: some View {
+        Section("Mode de données véhicule") {
+            Picker("Mode", selection: Binding(
+                get: { appState.settings.useSimulationMode },
+                set: { isManualMode in
+                    Task { await appState.setManualModeEnabled(isManualMode) }
+                }
+            )) {
+                Text("Manuel").tag(true)
+                Text("Auto").tag(false)
+            }
+            .pickerStyle(.segmented)
+
+            Text(appState.settings.useSimulationMode
+                 ? "Le niveau de charge est défini manuellement depuis l’accueil."
+                 : "Le niveau de charge et la position viennent du compte MyRenault.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
     }
 
@@ -55,25 +79,47 @@ struct SettingsView: View {
             if appState.isAuthenticated {
                 authenticatedRow
             } else {
-                loginForm
+                if appState.settings.useSimulationMode {
+                    Text("Passez en mode Auto pour connecter votre compte MyRenault.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    loginForm
+                }
             }
         } header: {
             Label("Compte Renault / MyRenault", systemImage: "person.badge.key.fill")
         }
     }
 
-    @ViewBuilder private var simulationSection: some View {
-        Section("Mode simulation") {
-            Toggle("Activer le mode simulation", isOn: $appState.settings.useSimulationMode)
-                .tint(.orange)
-            if appState.settings.useSimulationMode {
-                Picker("Scénario", selection: $selectedScenario) {
-                    ForEach(SimulationScenario.allCases) { scenario in
-                        Text(scenario.rawValue).tag(scenario)
+    @ViewBuilder private var manualModeSection: some View {
+        if appState.settings.useSimulationMode {
+            Section("Mode manuel") {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text("Niveau de charge manuel")
+                        Spacer()
+                        Text("\(Int(appState.settings.simulatedSOCPercent)) %")
+                            .foregroundStyle(.secondary)
+                    }
+                    Slider(
+                        value: Binding(
+                            get: { appState.settings.simulatedSOCPercent },
+                            set: { appState.settings.simulatedSOCPercent = $0 }
+                        ),
+                        in: 0...100,
+                        step: 1
+                    )
+                    .tint(.green)
+                    .onChange(of: appState.settings.simulatedSOCPercent) { _, newValue in
+                        Task { await appState.updateManualSOC(newValue) }
                     }
                 }
-                .onChange(of: selectedScenario) { _, _ in
-                    Task { await appState.refreshVehicleStatus() }
+
+                Picker("Slider sur l’accueil", selection: $appState.settings.manualSOCSliderLayout) {
+                    ForEach(ManualSOCSliderLayout.allCases, id: \.self) { layout in
+                        Text(layout.displayName).tag(layout)
+                    }
                 }
             }
         }
@@ -230,7 +276,7 @@ struct SettingsView: View {
             VStack(alignment: .leading) {
                 Text("Connecté à MyRenault")
                     .font(.headline)
-                Text("Mode réel actif")
+                Text("Mode auto actif")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -300,7 +346,7 @@ struct SettingsView: View {
                     Text("Connexion…").padding(.leading, 6)
                 }
             } else {
-                Label("Se connecter à MyRenault", systemImage: "bolt.car.fill")
+                Label("Connexion via MyRenault", systemImage: "bolt.car.fill")
             }
         }
         .disabled(emailInput.isEmpty || passwordInput.isEmpty || vinInput.isEmpty || isConnecting)

@@ -90,6 +90,8 @@ final class AppState: ObservableObject {
         settings.save()
         isAuthenticated = false
         currentVehicleLocation = nil
+        await applyManualSOC()
+        await refreshVehicleStatus()
     }
 
     // MARK: - Vehicle
@@ -97,7 +99,16 @@ final class AppState: ObservableObject {
     func refreshVehicleStatus() async {
         isLoading = true
         defer { isLoading = false }
+        if !settings.useSimulationMode && realService == nil {
+            vehicleStatus = nil
+            currentVehicleLocation = nil
+            isAuthenticated = false
+            return
+        }
         do {
+            if settings.useSimulationMode {
+                await applyManualSOC()
+            }
             vehicleStatus = try await activeVehicleService.getVehicleStatus()
             currentVehicleLocation = try? await activeVehicleService.getVehicleLocation()
         } catch {
@@ -370,6 +381,26 @@ final class AppState: ObservableObject {
         selectedStationIDsByStop[stop.id] = station.id
     }
 
+    func setManualModeEnabled(_ isManualMode: Bool) async {
+        settings.useSimulationMode = isManualMode
+        settings.save()
+        if isManualMode {
+            await applyManualSOC()
+        } else if realService == nil {
+            vehicleStatus = nil
+            currentVehicleLocation = nil
+        }
+        await refreshVehicleStatus()
+    }
+
+    func updateManualSOC(_ soc: Double) async {
+        settings.simulatedSOCPercent = min(100, max(0, soc))
+        settings.save()
+        guard settings.useSimulationMode else { return }
+        await applyManualSOC()
+        await refreshVehicleStatus()
+    }
+
     func recalculateChargingStops(
         preference: ChargingStationSelectionPreference
     ) {
@@ -472,6 +503,10 @@ final class AppState: ObservableObject {
         buildRealService(vin: vin)
         isAuthenticated = true
         settings.useSimulationMode = false
+    }
+
+    private func applyManualSOC() async {
+        await mockVehicleService.setCustomSOC(settings.simulatedSOCPercent)
     }
 
     private func buildRealService(vin: String) {
