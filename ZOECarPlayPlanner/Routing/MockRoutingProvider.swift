@@ -22,7 +22,12 @@ struct MockRoutingProvider: RoutingProvider {
             distanceKm *= 1.05
         }
 
-        let durationMinutes = distanceKm / 90.0 * 60.0
+        if preferences.preferScenic {
+            distanceKm *= 1.08
+        }
+
+        let averageSpeedKmh: Double = preferences.mode == .eco ? 72.0 : 90.0
+        let durationMinutes = distanceKm / averageSpeedKmh * 60.0
 
         return Route(
             origin: RoutePoint(
@@ -47,26 +52,7 @@ struct MockRoutingProvider: RoutingProvider {
         from origin: CLLocationCoordinate2D,
         to destination: CLLocationCoordinate2D
     ) async throws -> Route {
-        // Simulation : distance à vol d'oiseau × 1.3 (facteur routier)
-        let distanceKm = haversineDistanceKm(from: origin, to: destination) * 1.3
-        let durationMinutes = distanceKm / 90.0 * 60.0  // ≈ 90 km/h moyen
-
-        return Route(
-            origin: RoutePoint(
-                name: "Départ",
-                coordinate: origin,
-                distanceFromOriginKm: 0
-            ),
-            destination: RoutePoint(
-                name: "Destination",
-                coordinate: destination,
-                distanceFromOriginKm: distanceKm
-            ),
-            totalDistanceKm: distanceKm,
-            estimatedDurationMinutes: durationMinutes,
-            waypoints: [],
-            roadType: .typical
-        )
+        try await calculateRoute(from: origin, to: destination, preferences: .init())
     }
 
     // MARK: - Haversine

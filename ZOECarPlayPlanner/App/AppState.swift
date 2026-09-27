@@ -1,6 +1,6 @@
-import Foundation
+import SwiftUI
 import CoreLocation
-import Combine
+import MapKit
 
 // MARK: - AppState
 
@@ -19,6 +19,9 @@ final class AppState: ObservableObject {
     let auth = RenaultAuthentication()
     private var realService: RealRenaultVehicleService?
 
+    private static let routeHistoryKey = "RouteHistory"
+    private static let maxHistoryEntries = 20
+
     /// Service actif selon le mode (simulation ou réel).
     private var activeVehicleService: any RenaultVehicleService {
         if settings.useSimulationMode || realService == nil {
@@ -36,10 +39,16 @@ final class AppState: ObservableObject {
     @Published var isLoading: Bool = false
     @Published var error: AppError?
     @Published var isAuthenticated: Bool = false
+    @Published var routeHistory: [PlannedTrip] = []
+    @Published var recentPlaces: [TripPlace] = []
+    @Published var lastPlannedTrip: PlannedTrip?
 
     // MARK: - Init
 
     init() {
+        routeHistory = loadRouteHistory()
+        recentPlaces = buildRecentPlaces(from: routeHistory)
+
         Task {
             // Vérifier si des credentials existent déjà et construire le service réel
             await checkExistingCredentials()
@@ -90,16 +99,83 @@ final class AppState: ObservableObject {
     // MARK: - Planning
 
     func planRoute(from origin: CLLocationCoordinate2D, to destination: CLLocationCoordinate2D) async {
+        let originPlace = TripPlace(name: "Départ", coordinate: origin)
+        let destinationPlace = TripPlace(name: "Destination", coordinate: destination)
+        await planTrip(origin: originPlace, destination: destinationPlace, waypoints: [])
+    }
+
+    func planTrip(origin: TripPlace, destination: TripPlace, waypoints: [TripPlace]) async {
         isLoading = true
         defer { isLoading = false }
         error = nil
+
         do {
-            let route = try await routingProvider.calculateRoute(
-                from: origin,
-                to: destination,
-                preferences: settings.routePreferences
+            let points = [origin] + waypoints + [destination]
+            guard points.count >= 2 else { throw RoutingError.invalidCoordinates }
+
+            var totalDistanceKm = 0.0
+            var totalDurationMinutes = 0.0
+            var weightedHighway = 0.0
+            var weightedRoad = 0.0
+            var weightedCity = 0.0
+            var routeWaypoints: [RoutePoint] = []
+            var cumulativeDistance = 0.0
+
+            for index in 0..<(points.count - 1) {
+                let segment = try await routingProvider.calculateRoute(
+                    from: points[index].coordinate,
+                    to: points[index + 1].coordinate,
+                    preferences: settings.routePreferences
+                )
+
+                totalDistanceKm += segment.totalDistanceKm
+                totalDurationMinutes += segment.estimatedDurationMinutes
+                weightedHighway += segment.roadType.highwayPercent * segment.totalDistanceKm
+                weightedRoad += segment.roadType.roadPercent * segment.totalDistanceKm
+                weightedCity += segment.roadType.cityPercent * segment.totalDistanceKm
+
+                if index < points.count - 2 {
+                    cumulativeDistance += segment.totalDistanceKm
+                    routeWaypoints.append(
+                        RoutePoint(
+                            name: points[index + 1].name,
+                            coordinate: points[index + 1].coordinate,
+                            distanceFromOriginKm: cumulativeDistance
+                        )
+                    )
+                }
+            }
+
+            let roadType: RoadTypeDistribution
+            if totalDistanceKm > 0 {
+                roadType = RoadTypeDistribution(
+                    highwayPercent: weightedHighway / totalDistanceKm,
+                    roadPercent: weightedRoad / totalDistanceKm,
+                    cityPercent: weightedCity / totalDistanceKm
+                )
+            } else {
+                roadType = .typical
+            }
+
+            let route = Route(
+                origin: RoutePoint(name: origin.name, coordinate: origin.coordinate, distanceFromOriginKm: 0),
+                destination: RoutePoint(name: destination.name, coordinate: destination.coordinate, distanceFromOriginKm: totalDistanceKm),
+                totalDistanceKm: totalDistanceKm,
+                estimatedDurationMinutes: totalDurationMinutes,
+                waypoints: routeWaypoints,
+                roadType: roadType,
+                routePreferences: settings.routePreferences
             )
             currentRoute = route
+
+            let trip = PlannedTrip(
+                origin: origin,
+                destination: destination,
+                waypoints: waypoints,
+                preferences: settings.routePreferences
+            )
+            lastPlannedTrip = trip
+            addToHistory(trip)
 
             let stations = try await stationProvider.findStations(
                 along: route,
@@ -110,7 +186,10 @@ final class AppState: ObservableObject {
             let input = ChargingPlannerInput(
                 currentSOCPercent: status.battery.stateOfChargePercent,
                 usableBatteryKWh: settings.vehicle.usableBatteryKWh,
-                consumptionWhPerKm: settings.consumptionWhPerKm,
+                consumptionWhPerKm: effectiveConsumptionWhPerKm(
+                    baseConsumption: settings.consumptionWhPerKm,
+                    mode: settings.routePreferences.mode
+                ),
                 distanceKm: route.totalDistanceKm,
                 strategy: ChargingStrategy(
                     minimumSOCPercent: settings.minBatteryAtArrivalPercent,
@@ -127,7 +206,110 @@ final class AppState: ObservableObject {
         }
     }
 
+    func relaunchTripFromHistory(_ trip: PlannedTrip) async {
+        settings.routePreferences = trip.preferences
+        await planTrip(origin: trip.origin, destination: trip.destination, waypoints: trip.waypoints)
+    }
+
+    @discardableResult
+    func openCurrentTripInMaps(includeChargingStops: Bool = true) -> Bool {
+        let routePlaces: [TripPlace]
+        if let trip = lastPlannedTrip {
+            routePlaces = trip.allPlaces
+        } else if let route = currentRoute {
+            routePlaces = [
+                TripPlace(name: route.origin.name, coordinate: route.origin.coordinate)
+            ] + route.waypoints.map {
+                TripPlace(name: $0.name, coordinate: $0.coordinate)
+            } + [
+                TripPlace(name: route.destination.name, coordinate: route.destination.coordinate)
+            ]
+        } else {
+            return false
+        }
+
+        var mapItems = routePlaces.map { place in
+            let item = MKMapItem(placemark: MKPlacemark(coordinate: place.coordinate))
+            item.name = place.name
+            return item
+        }
+
+        if includeChargingStops, let plan = chargingPlan {
+            let chargingItems = plan.stops
+                .sorted { $0.distanceFromOriginKm < $1.distanceFromOriginKm }
+                .compactMap { stop -> MKMapItem? in
+                    guard let station = stop.station else { return nil }
+                    let item = MKMapItem(placemark: MKPlacemark(coordinate: station.coordinate))
+                    item.name = station.name
+                    return item
+                }
+
+            if let destinationItem = mapItems.popLast() {
+                mapItems.append(contentsOf: chargingItems)
+                mapItems.append(destinationItem)
+            }
+        }
+
+        guard mapItems.count >= 2 else { return false }
+        MKMapItem.openMaps(
+            with: mapItems,
+            launchOptions: [MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving]
+        )
+        return true
+    }
+
     // MARK: - Private
+
+    private func effectiveConsumptionWhPerKm(baseConsumption: Double, mode: TravelMode) -> Double {
+        switch mode {
+        case .normal:
+            return baseConsumption
+        case .eco:
+            return baseConsumption * 0.9
+        }
+    }
+
+    private func addToHistory(_ trip: PlannedTrip) {
+        routeHistory.removeAll(where: { $0.matchesPath(as: trip) })
+        routeHistory.insert(trip, at: 0)
+        if routeHistory.count > Self.maxHistoryEntries {
+            routeHistory = Array(routeHistory.prefix(Self.maxHistoryEntries))
+        }
+        recentPlaces = buildRecentPlaces(from: routeHistory)
+        saveRouteHistory()
+    }
+
+    private func buildRecentPlaces(from history: [PlannedTrip]) -> [TripPlace] {
+        var unique: [TripPlace] = []
+
+        for place in history.flatMap({ $0.allPlaces }) {
+            let isDuplicate = unique.contains(where: {
+                $0.name == place.name
+                && abs($0.latitude - place.latitude) < 0.0001
+                && abs($0.longitude - place.longitude) < 0.0001
+            })
+            if !isDuplicate {
+                unique.append(place)
+            }
+            if unique.count >= 12 {
+                break
+            }
+        }
+
+        return unique
+    }
+
+    private func loadRouteHistory() -> [PlannedTrip] {
+        guard let data = UserDefaults.standard.data(forKey: Self.routeHistoryKey),
+              let history = try? JSONDecoder().decode([PlannedTrip].self, from: data)
+        else { return [] }
+        return history
+    }
+
+    private func saveRouteHistory() {
+        guard let data = try? JSONEncoder().encode(routeHistory) else { return }
+        UserDefaults.standard.set(data, forKey: Self.routeHistoryKey)
+    }
 
     private func checkExistingCredentials() async {
         guard await auth.hasCredentials else { return }
@@ -142,5 +324,11 @@ final class AppState: ObservableObject {
         let client = RenaultAPIClient(auth: auth)
         realService = RealRenaultVehicleService(apiClient: client, vin: vin)
         try? KeychainCredentialStore().store(value: vin, forKey: "renault_vin")
+    }
+}
+
+private extension PlannedTrip {
+    func matchesPath(as other: PlannedTrip) -> Bool {
+        allPlaces.map { $0.name } == other.allPlaces.map { $0.name }
     }
 }

@@ -34,6 +34,13 @@ struct ChargingPlanView: View {
                 if plan.totalExtraTimeMinutes > 0 {
                     LabeledContent("Temps de recharge estimé", value: "≈ \(Int(plan.totalExtraTimeMinutes)) min")
                 }
+
+                Button {
+                    _ = appState.openCurrentTripInMaps(includeChargingStops: true)
+                } label: {
+                    Label("Ouvrir dans Plans (CarPlay inclus)", systemImage: "carplay")
+                }
+                .foregroundStyle(.blue)
             }
 
             if plan.stops.isEmpty {

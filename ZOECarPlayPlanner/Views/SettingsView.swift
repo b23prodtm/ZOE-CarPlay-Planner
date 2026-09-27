@@ -86,6 +86,13 @@ struct SettingsView: View {
     
     @ViewBuilder private var routePreferencesSection: some View {
         Section("Préférences de trajet") {
+            Picker("Mode", selection: $appState.settings.routePreferences.mode) {
+                ForEach(TravelMode.allCases, id: \.self) { mode in
+                    Text(mode.label).tag(mode)
+                }
+            }
+            .pickerStyle(.segmented)
+
             Toggle("Éviter les autoroutes", isOn: $appState.settings.routePreferences.avoidHighways)
                 .tint(.orange)
 

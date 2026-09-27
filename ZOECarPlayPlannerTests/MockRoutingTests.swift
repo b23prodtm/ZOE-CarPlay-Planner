@@ -39,6 +39,37 @@ final class MockRoutingTests: XCTestCase {
         XCTAssertGreaterThan(route.estimatedDurationMinutes, 0)
     }
 
+
+    func test_preferences_avoidHighwaysLongerThanPreferHighways() async throws {
+        let avoid = try await provider.calculateRoute(
+            from: lyon,
+            to: paris,
+            preferences: RoutePreferences(avoidHighways: true)
+        )
+        let prefer = try await provider.calculateRoute(
+            from: lyon,
+            to: paris,
+            preferences: RoutePreferences(preferHighways: true)
+        )
+
+        XCTAssertGreaterThan(avoid.totalDistanceKm, prefer.totalDistanceKm)
+    }
+
+    func test_ecoMode_hasLongerDurationThanNormal() async throws {
+        let normal = try await provider.calculateRoute(
+            from: lyon,
+            to: geneve,
+            preferences: RoutePreferences(mode: .normal)
+        )
+        let eco = try await provider.calculateRoute(
+            from: lyon,
+            to: geneve,
+            preferences: RoutePreferences(mode: .eco)
+        )
+
+        XCTAssertGreaterThan(eco.estimatedDurationMinutes, normal.estimatedDurationMinutes)
+    }
+
     func test_route_originCoordinatePreserved() async throws {
         let route = try await provider.calculateRoute(from: lyon, to: geneve)
         XCTAssertEqual(route.origin.coordinate.latitude, lyon.latitude, accuracy: 0.001)
